@@ -653,6 +653,10 @@ h1, h2, h3, h4 {
   padding: 28px 24px;
   border-right: 1px solid var(--border);
   position: relative;
+  /* Subtle frosted panel so numbers stay readable over the 3D scene */
+  background: rgba(8, 11, 18, 0.55);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .specs__cell:last-child { border-right: none; }
@@ -874,15 +878,24 @@ h1, h2, h3, h4 {
   display: grid;
   grid-template-columns: 80px 1fr 1.5fr 1fr;
   gap: 20px;
-  padding: 24px 8px;
+  padding: 24px 18px;
   border-bottom: 1px solid var(--border);
   align-items: center;
   transition: background 0.3s var(--ease);
   position: relative;
+  /* Frosted backing so copy reads over the 3D scene */
+  background: rgba(8, 11, 18, 0.55);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .material-row:hover {
-  background: linear-gradient(90deg, transparent, rgba(0, 229, 255, 0.04), transparent);
+  background: linear-gradient(
+    90deg,
+    rgba(8, 11, 18, 0.55),
+    rgba(0, 229, 255, 0.1),
+    rgba(8, 11, 18, 0.55)
+  );
 }
 
 .material-row:hover .material-row__name { color: var(--led); }
@@ -943,10 +956,13 @@ h1, h2, h3, h4 {
 .cost__row {
   display: grid;
   grid-template-columns: 1fr auto;
-  padding: 20px 0;
+  padding: 20px 18px;
   border-bottom: 1px solid var(--border);
   align-items: center;
   gap: 16px;
+  background: rgba(8, 11, 18, 0.55);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .cost__row-label {
@@ -1659,7 +1675,13 @@ h1, h2, h3, h4 {
 
 .timeline__item {
   position: relative;
-  padding: 20px 0 40px 24px;
+  padding: 20px 24px 24px 28px;
+  margin-bottom: 18px;
+  border-radius: 14px;
+  background: rgba(8, 11, 18, 0.58);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .timeline__item::before {
