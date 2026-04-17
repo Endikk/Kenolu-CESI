@@ -24,14 +24,25 @@ import Experiment from './components/Experiment'
 export default function App() {
   const progressRef = useRef(0)
   const [loaded, setLoaded] = useState(false)
+  // Strip Vite's BASE_URL prefix so the app reasons about the logical
+  // path (`/`, `/experimentation`) regardless of where it's deployed
+  // (dev at `/`, GitHub Pages at `/Kenolu-CESI/`).
+  const baseWithoutSlash = import.meta.env.BASE_URL.replace(/\/$/, '')
+  const toLogicalPath = (p) =>
+    baseWithoutSlash && p.startsWith(baseWithoutSlash)
+      ? p.slice(baseWithoutSlash.length) || '/'
+      : p
   const [route, setRoute] = useState(() =>
-    typeof window !== 'undefined' ? window.location.pathname : '/'
+    typeof window !== 'undefined'
+      ? toLogicalPath(window.location.pathname)
+      : '/'
   )
 
   useEffect(() => {
-    const onNav = () => setRoute(window.location.pathname)
+    const onNav = () => setRoute(toLogicalPath(window.location.pathname))
     window.addEventListener('popstate', onNav)
     return () => window.removeEventListener('popstate', onNav)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   if (route === '/experimentation') {

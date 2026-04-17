@@ -141,7 +141,11 @@ export default function Experiment() {
       </Canvas>
 
       <header className="experiment__hud-top">
-        <a href="/" className="experiment__back" aria-label="Back">
+        <a
+          href={import.meta.env.BASE_URL}
+          className="experiment__back"
+          aria-label="Back"
+        >
           ← Back
         </a>
         <div className="experiment__title">

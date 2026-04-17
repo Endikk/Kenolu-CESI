@@ -13,7 +13,7 @@ export default function Nav() {
         <a href="#offgrid">off-grid</a>
         <a href="#advantages">advantages</a>
         <a href="#cost">cost</a>
-        <a href="/experimentation">3D view</a>
+        <a href={`${import.meta.env.BASE_URL}experimentation`}>3D view</a>
       </div>
       <a href="#cta" className="nav__cta">Book a demo</a>
     </nav>
