@@ -465,7 +465,7 @@ h1, h2, h3, h4 {
 
 .pin-scene {
   position: relative;
-  height: 300vh; /* scroll length driving 3D reveal */
+  height: 200vh; /* scroll length driving the 3D reveal */
   z-index: 2;
 }
 
@@ -485,52 +485,68 @@ h1, h2, h3, h4 {
 }
 
 .pin-scene__labels {
-  position: relative;
-  height: 220px;
+  /* Vertical list — one label per row. Alternating left/right is done
+     via `align-self` on each label. No absolute positioning, no overlap. */
+  list-style: none;
   margin: 0 auto;
+  padding: 0;
   width: min(1100px, 92vw);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: stretch;
 }
 
 .reveal-label {
-  position: absolute;
+  align-self: flex-start;
+  max-width: 420px;
   font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.15em;
+  font-size: 12px;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--text-dim);
-  padding: 8px 12px;
+  padding: 10px 16px;
   border: 1px solid var(--border-strong);
-  border-radius: 6px;
-  background: rgba(10, 10, 18, 0.7);
-  backdrop-filter: blur(8px);
+  border-radius: 999px;
+  background: rgba(10, 10, 18, 0.75);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   opacity: 0;
-  transition: opacity 0.6s var(--ease);
+  transform: translateX(-18px);
+  transition: opacity 0.5s var(--ease), transform 0.5s var(--ease);
   pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 10px 30px -18px rgba(0, 229, 255, 0.35);
+}
+
+.reveal-label--right {
+  align-self: flex-end;
+  transform: translateX(18px);
 }
 
 .reveal-label::before {
   content: "";
-  position: absolute;
-  width: 40px;
+  width: 28px;
   height: 1px;
   background: var(--led);
   box-shadow: 0 0 6px var(--led);
-  top: 50%;
-  left: -45px;
+  flex-shrink: 0;
 }
 
-.reveal-label--right::before {
-  left: auto;
-  right: -45px;
+.reveal-label--right {
+  flex-direction: row-reverse;
 }
 
 .reveal-label.is-active {
   opacity: 1;
+  transform: translateX(0);
 }
 
 .reveal-label__num {
   color: var(--led);
-  margin-right: 8px;
+  font-weight: 500;
 }
 
 /* ============================================================
@@ -1812,7 +1828,7 @@ h1, h2, h3, h4 {
 @media (max-width: 600px) {
   .section { padding: 80px 0; }
   .hero__title { font-size: clamp(60px, 22vw, 120px); }
-  .pin-scene { height: 220vh; }
+  .pin-scene { height: 170vh; }
 }
 
 /* ============================================================

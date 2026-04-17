@@ -4,6 +4,9 @@ import {
   ContactShadows,
   OrbitControls,
   PerspectiveCamera,
+  AdaptiveDpr,
+  AdaptiveEvents,
+  PerformanceMonitor,
 } from '@react-three/drei'
 import { Suspense, useRef, useState } from 'react'
 import * as THREE from 'three'
@@ -44,6 +47,7 @@ export default function Experiment() {
   const [videoUrl, setVideoUrl] = useState('')
   const [videoId, setVideoId] = useState(null)
   const [videoError, setVideoError] = useState(false)
+  const [dprCap, setDprCap] = useState(1.5)
 
   const onProgressChange = (e) => {
     const v = Number(e.target.value)
@@ -71,15 +75,24 @@ export default function Experiment() {
   return (
     <div className="experiment">
       <Canvas
-        shadows
-        dpr={[1, 2]}
+        shadows="soft"
+        dpr={[0.9, dprCap]}
         gl={{
           antialias: true,
           alpha: false,
           powerPreference: 'high-performance',
           toneMapping: THREE.ACESFilmicToneMapping,
+          shadowMapType: THREE.PCFShadowMap,
         }}
       >
+        <PerformanceMonitor
+          onDecline={() => setDprCap(1)}
+          onFallback={() => setDprCap(0.85)}
+          flipflops={3}
+        />
+        <AdaptiveDpr pixelated />
+        <AdaptiveEvents />
+
         <color attach="background" args={['#f4f4f2']} />
 
         {/* Positioned to see the porch + door side (front wall is at -Z). */}
@@ -92,7 +105,7 @@ export default function Experiment() {
           intensity={2.6}
           color="#fff3de"
           castShadow
-          shadow-mapSize={[2048, 2048]}
+          shadow-mapSize={[1024, 1024]}
           shadow-bias={-0.0004}
           shadow-camera-far={50}
           shadow-camera-left={-18}
@@ -125,6 +138,7 @@ export default function Experiment() {
             blur={2.6}
             far={6}
             color="#1a1410"
+            frames={144}
           />
 
           <Environment preset="studio" />
