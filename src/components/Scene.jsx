@@ -45,27 +45,40 @@ export default function Scene({ progressRef }) {
           powerPreference: 'high-performance',
           toneMapping: THREE.ACESFilmicToneMapping,
         }}
-        camera={{ position: [0, 1.5, 13], fov: 38 }}
+        camera={{ position: [0, 2.2, 16], fov: 42 }}
       >
-        <color attach="background" args={['#05050a']} />
-        <fog attach="fog" args={['#05050a', 18, 42]} />
+        <color attach="background" args={['#1c2740']} />
+        <fog attach="fog" args={['#1c2740', 26, 62]} />
 
-        <ambientLight intensity={0.2} />
+        <ambientLight intensity={0.9} />
+        <hemisphereLight args={['#cfe0ff', '#3a2a1a', 1.1]} />
         <directionalLight
-          position={[6, 8, 5]}
-          intensity={0.9}
-          color="#eaf4ff"
+          position={[8, 14, 8]}
+          intensity={2.2}
+          color="#fff2d8"
           castShadow
-          shadow-mapSize={[1024, 1024]}
-          shadow-camera-far={30}
-          shadow-camera-left={-10}
-          shadow-camera-right={10}
-          shadow-camera-top={10}
-          shadow-camera-bottom={-10}
+          shadow-mapSize={[2048, 2048]}
+          shadow-bias={-0.0004}
+          shadow-camera-far={45}
+          shadow-camera-left={-16}
+          shadow-camera-right={16}
+          shadow-camera-top={16}
+          shadow-camera-bottom={-16}
         />
-        <pointLight position={[-6, 2, -3]} intensity={1.8} color="#6a5cff" distance={24} />
-        <pointLight position={[6, 1.5, -4]} intensity={2.0} color="#00e5ff" distance={24} />
-        <pointLight position={[0, -1.5, 3]} intensity={0.8} color="#00e5ff" distance={14} />
+        {/* Fill + rim lights (cool to counter the warm key) */}
+        <directionalLight position={[-10, 6, -4]} intensity={0.7} color="#8fb0ff" />
+        <pointLight position={[-7, 3, -3]} intensity={1.8} color="#6a5cff" distance={28} />
+        <pointLight position={[7, 2, -4]} intensity={1.8} color="#00e5ff" distance={28} />
+        <pointLight position={[0, -1.5, 4]} intensity={0.6} color="#00e5ff" distance={16} />
+        <spotLight
+          position={[0, 10, 8]}
+          intensity={1.4}
+          angle={0.7}
+          penumbra={0.8}
+          color="#ffcf7a"
+          distance={28}
+          decay={1.5}
+        />
 
         <Suspense fallback={null}>
           <CameraRig progressRef={progressRef} pointerRef={pointerRef}>
@@ -100,41 +113,41 @@ export default function Scene({ progressRef }) {
             args={[60, 60]}
             cellSize={0.5}
             cellThickness={0.5}
-            cellColor="#1a1d28"
+            cellColor="#2a3550"
             sectionSize={3}
             sectionThickness={1}
             sectionColor="#00e5ff"
-            fadeDistance={28}
+            fadeDistance={30}
             fadeStrength={1.2}
             infiniteGrid
           />
 
           <ContactShadows
             position={[0, -2.9, 0]}
-            opacity={0.5}
-            scale={20}
-            blur={3.5}
-            far={5}
-            color="#00e5ff"
+            opacity={0.6}
+            scale={22}
+            blur={3}
+            far={6}
+            color="#0a1020"
           />
 
-          <Environment preset="night" />
+          <Environment preset="sunset" />
 
           <EffectComposer multisampling={0}>
             <SMAA />
             <Bloom
-              intensity={0.8}
-              luminanceThreshold={0.25}
+              intensity={0.55}
+              luminanceThreshold={0.4}
               luminanceSmoothing={0.9}
               mipmapBlur
               kernelSize={KernelSize.LARGE}
             />
             <ChromaticAberration
               blendFunction={BlendFunction.NORMAL}
-              offset={[0.0006, 0.0009]}
+              offset={[0.0003, 0.0005]}
             />
-            <Vignette eskil={false} offset={0.22} darkness={0.85} />
-            <Noise opacity={0.045} blendFunction={BlendFunction.OVERLAY} />
+            <Vignette eskil={false} offset={0.3} darkness={0.55} />
+            <Noise opacity={0.03} blendFunction={BlendFunction.OVERLAY} />
           </EffectComposer>
         </Suspense>
       </Canvas>
@@ -153,10 +166,10 @@ function CameraRig({ progressRef, pointerRef, children }) {
     const py = pointerRef?.current?.y ?? 0
 
     // Cinematic camera arc driven by scroll progress.
-    const targetZ = 13 - p * 4.5
-    const targetY = 1.2 + p * 2.4
-    const pushX = px * 0.9
-    const pushY = -py * 0.35
+    const targetZ = 16 - p * 5.0
+    const targetY = 1.8 + p * 3.0
+    const pushX = px * 1.1
+    const pushY = -py * 0.4
 
     cam.current.position.x += (pushX - cam.current.position.x) * 0.04
     cam.current.position.y += (targetY + pushY - cam.current.position.y) * 0.045

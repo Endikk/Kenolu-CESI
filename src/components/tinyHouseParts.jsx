@@ -1,0 +1,1458 @@
+import { useFrame } from '@react-three/fiber'
+import { Edges, RoundedBox } from '@react-three/drei'
+import { useMemo, useRef } from 'react'
+import * as THREE from 'three'
+
+/* ============================================================
+   KENOLU TINY HOUSE — atoms, textures and constants.
+   This file holds every reusable piece of geometry; the main
+   composition lives in TinyHouse3D.jsx and imports from here.
+   Co-ordinates are in metres, expressed in the ROOT group's
+   local frame (the root is offset by y=-0.2 in world).
+   ============================================================ */
+
+/* ------------------------------------------------------------
+   1. DIMENSIONS & DERIVED CONSTANTS
+   ------------------------------------------------------------ */
+
+export const L = 7.2 // length along X
+export const W = 2.5 // width along Z
+export const H = 2.5 // wall height along Y
+export const T = 0.12 // wall thickness
+export const ROOF_PITCH = 0.55 // rise from eave to ridge
+
+// Floor deck
+export const FLOOR_Y = -H / 2 // center of floor
+export const FLOOR_THICKNESS = 0.12
+
+// Chassis sits directly under the floor; wheels hang beneath the chassis.
+export const CHASSIS_Y = -H / 2 - 0.4 // chassis group center
+export const CHASSIS_BEAM_THICKNESS = 0.2
+export const SUBFLOOR_Y = (CHASSIS_Y + CHASSIS_BEAM_THICKNESS / 2 + (FLOOR_Y - FLOOR_THICKNESS / 2)) / 2
+export const SUBFLOOR_HEIGHT =
+  FLOOR_Y - FLOOR_THICKNESS / 2 - (CHASSIS_Y + CHASSIS_BEAM_THICKNESS / 2)
+
+export const WHEEL_OFFSET_Y = -0.3 // wheel y within chassis group
+export const WHEEL_CENTER_Y = CHASSIS_Y + WHEEL_OFFSET_Y
+export const WHEEL_RADIUS = 0.58
+export const GROUND_Y = WHEEL_CENTER_Y - WHEEL_RADIUS // wheels kiss the ground
+
+// Roof geometry
+export const ROOF_BASE_Y = H / 2 + 0.1
+export const SLOPE_LEN = Math.sqrt((W / 2) ** 2 + ROOF_PITCH ** 2)
+export const SLOPE_ANGLE = Math.atan2(ROOF_PITCH, W / 2) // pitch from horizontal
+
+// Shared colour palette
+export const COLORS = {
+  steel: '#14161d',
+  darkMetal: '#1a1d26',
+  brightMetal: '#c8ccd4',
+  brass: '#e0c070',
+  darkWood: '#2a1a10',
+  deepDark: '#05050a',
+  insulation: '#c9a86a',
+  cyan: '#00e5ff',
+  violet: '#6a5cff',
+  warm: '#ffcf7a',
+}
+
+/* ------------------------------------------------------------
+   2. PROCEDURAL TEXTURES (generated via CanvasTexture, cached)
+   ------------------------------------------------------------ */
+
+export function makeWoodTexture(repeat = [4, 1]) {
+  const canvas = document.createElement('canvas')
+  canvas.width = 512
+  canvas.height = 512
+  const ctx = canvas.getContext('2d')
+  const base = ctx.createLinearGradient(0, 0, 0, 512)
+  base.addColorStop(0, '#3b2a1d')
+  base.addColorStop(1, '#241712')
+  ctx.fillStyle = base
+  ctx.fillRect(0, 0, 512, 512)
+
+  const plankW = 48
+  for (let x = 0; x < 512; x += plankW) {
+    const hue = 22 + Math.random() * 12
+    const sat = 28 + Math.random() * 18
+    const lit = 14 + Math.random() * 10
+    ctx.fillStyle = `hsl(${hue}, ${sat}%, ${lit}%)`
+    ctx.fillRect(x + 1, 0, plankW - 2, 512)
+    for (let i = 0; i < 14; i++) {
+      ctx.strokeStyle = `rgba(0,0,0,${0.08 + Math.random() * 0.18})`
+      ctx.lineWidth = 0.8 + Math.random() * 0.6
+      ctx.beginPath()
+      const y = Math.random() * 512
+      ctx.moveTo(x, y)
+      ctx.bezierCurveTo(
+        x + 12,
+        y + (Math.random() - 0.5) * 6,
+        x + 28,
+        y + (Math.random() - 0.5) * 6,
+        x + plankW,
+        y + (Math.random() - 0.5) * 6
+      )
+      ctx.stroke()
+    }
+    if (Math.random() < 0.4) {
+      const ky = Math.random() * 512
+      const r = 2 + Math.random() * 4
+      const g = ctx.createRadialGradient(x + plankW / 2, ky, 0, x + plankW / 2, ky, r * 2)
+      g.addColorStop(0, 'rgba(10,5,0,0.85)')
+      g.addColorStop(1, 'rgba(0,0,0,0)')
+      ctx.fillStyle = g
+      ctx.beginPath()
+      ctx.arc(x + plankW / 2, ky, r * 2, 0, Math.PI * 2)
+      ctx.fill()
+    }
+    ctx.strokeStyle = 'rgba(0,0,0,0.85)'
+    ctx.lineWidth = 1
+    ctx.beginPath()
+    ctx.moveTo(x, 0)
+    ctx.lineTo(x, 512)
+    ctx.stroke()
+  }
+
+  const tex = new THREE.CanvasTexture(canvas)
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping
+  tex.repeat.set(repeat[0], repeat[1])
+  tex.anisotropy = 8
+  tex.colorSpace = THREE.SRGBColorSpace
+  return tex
+}
+
+export function makeMetalSeamTexture(repeat = [6, 1]) {
+  const canvas = document.createElement('canvas')
+  canvas.width = 256
+  canvas.height = 256
+  const ctx = canvas.getContext('2d')
+  const g = ctx.createLinearGradient(0, 0, 256, 0)
+  g.addColorStop(0, '#0b0f1a')
+  g.addColorStop(0.5, '#141a28')
+  g.addColorStop(1, '#0b0f1a')
+  ctx.fillStyle = g
+  ctx.fillRect(0, 0, 256, 256)
+  for (let x = 0; x < 256; x += 32) {
+    ctx.fillStyle = '#05070d'
+    ctx.fillRect(x, 0, 2, 256)
+    ctx.fillStyle = 'rgba(255,255,255,0.04)'
+    ctx.fillRect(x + 2, 0, 1, 256)
+  }
+  for (let i = 0; i < 80; i++) {
+    ctx.strokeStyle = `rgba(255,255,255,${Math.random() * 0.04})`
+    ctx.beginPath()
+    ctx.moveTo(0, Math.random() * 256)
+    ctx.lineTo(256, Math.random() * 256)
+    ctx.stroke()
+  }
+  const tex = new THREE.CanvasTexture(canvas)
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping
+  tex.repeat.set(repeat[0], repeat[1])
+  tex.anisotropy = 8
+  tex.colorSpace = THREE.SRGBColorSpace
+  return tex
+}
+
+export function makeGrassTexture() {
+  const canvas = document.createElement('canvas')
+  canvas.width = 256
+  canvas.height = 256
+  const ctx = canvas.getContext('2d')
+  ctx.fillStyle = '#0d1410'
+  ctx.fillRect(0, 0, 256, 256)
+  for (let i = 0; i < 3000; i++) {
+    const x = Math.random() * 256
+    const y = Math.random() * 256
+    const l = 12 + Math.random() * 22
+    ctx.strokeStyle = `hsla(${130 + Math.random() * 40}, 40%, ${10 + Math.random() * 12}%, ${0.2 + Math.random() * 0.4})`
+    ctx.lineWidth = 0.6
+    ctx.beginPath()
+    ctx.moveTo(x, y)
+    ctx.lineTo(x + (Math.random() - 0.5) * 2, y - l * 0.3)
+    ctx.stroke()
+  }
+  const tex = new THREE.CanvasTexture(canvas)
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping
+  tex.repeat.set(8, 8)
+  tex.anisotropy = 4
+  return tex
+}
+
+export function makeSolarCellTexture() {
+  const canvas = document.createElement('canvas')
+  canvas.width = 256
+  canvas.height = 256
+  const ctx = canvas.getContext('2d')
+  ctx.fillStyle = '#020617'
+  ctx.fillRect(0, 0, 256, 256)
+  for (let i = 0; i < 8; i++) {
+    for (let j = 0; j < 8; j++) {
+      const x = i * 32
+      const y = j * 32
+      const g = ctx.createLinearGradient(x, y, x + 32, y + 32)
+      g.addColorStop(0, '#071a3a')
+      g.addColorStop(0.5, '#0e2b5c')
+      g.addColorStop(1, '#05102a')
+      ctx.fillStyle = g
+      ctx.beginPath()
+      ctx.moveTo(x + 4, y)
+      ctx.lineTo(x + 28, y)
+      ctx.lineTo(x + 32, y + 4)
+      ctx.lineTo(x + 32, y + 28)
+      ctx.lineTo(x + 28, y + 32)
+      ctx.lineTo(x + 4, y + 32)
+      ctx.lineTo(x, y + 28)
+      ctx.lineTo(x, y + 4)
+      ctx.closePath()
+      ctx.fill()
+      ctx.fillStyle = 'rgba(180,200,230,0.28)'
+      ctx.fillRect(x + 10, y + 2, 1, 28)
+      ctx.fillRect(x + 21, y + 2, 1, 28)
+    }
+  }
+  ctx.strokeStyle = '#0a0f1a'
+  ctx.lineWidth = 4
+  ctx.strokeRect(2, 2, 252, 252)
+  const tex = new THREE.CanvasTexture(canvas)
+  tex.anisotropy = 8
+  tex.colorSpace = THREE.SRGBColorSpace
+  return tex
+}
+
+/* ------------------------------------------------------------
+   3. EXTERIOR PARTS (chassis, walls, windows, roof accents…)
+   ------------------------------------------------------------ */
+
+export function DetailedWheel({ position }) {
+  return (
+    <group position={position}>
+      {/* Tire — one smooth body, no concentric ring bars */}
+      <mesh rotation={[Math.PI / 2, 0, 0]} castShadow>
+        <cylinderGeometry args={[WHEEL_RADIUS, WHEEL_RADIUS, 0.38, 48]} />
+        <meshStandardMaterial color="#0a0a10" roughness={0.9} metalness={0.1} />
+      </mesh>
+      {/* Slightly inset sidewalls */}
+      {[-0.19, 0.19].map((z, i) => (
+        <mesh key={i} position={[0, 0, z]} rotation={[Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[0.35, WHEEL_RADIUS - 0.01, 40]} />
+          <meshStandardMaterial
+            color="#14141a"
+            roughness={1}
+            side={THREE.DoubleSide}
+          />
+        </mesh>
+      ))}
+      {/* Hub plate */}
+      <mesh position={[0, 0, 0.2]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.34, 0.34, 0.04, 32]} />
+        <meshStandardMaterial color={COLORS.brightMetal} metalness={1} roughness={0.3} />
+      </mesh>
+      {/* Bolt circle */}
+      {Array.from({ length: 5 }).map((_, i) => {
+        const a = (i / 5) * Math.PI * 2
+        return (
+          <mesh
+            key={i}
+            position={[Math.cos(a) * 0.22, Math.sin(a) * 0.22, 0.22]}
+            rotation={[Math.PI / 2, 0, 0]}
+          >
+            <cylinderGeometry args={[0.028, 0.028, 0.03, 6]} />
+            <meshStandardMaterial color="#2a2e38" metalness={1} roughness={0.4} />
+          </mesh>
+        )
+      })}
+      {/* Central cap */}
+      <mesh position={[0, 0, 0.225]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.09, 0.09, 0.04, 24]} />
+        <meshStandardMaterial color={COLORS.darkMetal} metalness={1} roughness={0.25} />
+      </mesh>
+      <mesh position={[0, 0, 0.245]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.03, 0.03, 0.005, 16]} />
+        <meshStandardMaterial
+          color={COLORS.cyan}
+          emissive={COLORS.cyan}
+          emissiveIntensity={2.2}
+          toneMapped={false}
+        />
+      </mesh>
+    </group>
+  )
+}
+
+export function Fender({ position }) {
+  return (
+    <group position={position}>
+      <mesh castShadow>
+        <torusGeometry args={[WHEEL_RADIUS + 0.1, 0.09, 10, 18, Math.PI]} />
+        <meshStandardMaterial color="#12141c" roughness={0.6} metalness={0.9} />
+      </mesh>
+      {/* Inner skirt, hides wheel top */}
+      <mesh position={[0, 0.1, 0]}>
+        <boxGeometry args={[WHEEL_RADIUS * 2.1, 0.08, 0.3]} />
+        <meshStandardMaterial color="#0a0a12" roughness={0.8} />
+      </mesh>
+    </group>
+  )
+}
+
+export function Window({ width, height, thickness = 0.05, depth = 0.02, mullion = true }) {
+  const frameMat = (
+    <meshStandardMaterial color="#1a1f2a" metalness={0.7} roughness={0.4} />
+  )
+  return (
+    <group>
+      {/* Frame */}
+      <mesh position={[0, height / 2 + thickness / 2, 0]}>
+        <boxGeometry args={[width + thickness * 2, thickness, depth * 2]} />
+        {frameMat}
+      </mesh>
+      <mesh position={[0, -height / 2 - thickness / 2, 0]}>
+        <boxGeometry args={[width + thickness * 2, thickness, depth * 2]} />
+        {frameMat}
+      </mesh>
+      <mesh position={[-width / 2 - thickness / 2, 0, 0]}>
+        <boxGeometry args={[thickness, height, depth * 2]} />
+        {frameMat}
+      </mesh>
+      <mesh position={[width / 2 + thickness / 2, 0, 0]}>
+        <boxGeometry args={[thickness, height, depth * 2]} />
+        {frameMat}
+      </mesh>
+      {mullion && (
+        <>
+          <mesh>
+            <boxGeometry args={[width, thickness * 0.4, depth * 1.5]} />
+            {frameMat}
+          </mesh>
+          <mesh>
+            <boxGeometry args={[thickness * 0.4, height, depth * 1.5]} />
+            {frameMat}
+          </mesh>
+        </>
+      )}
+      <mesh>
+        <planeGeometry args={[width, height]} />
+        <meshPhysicalMaterial
+          color="#0a2033"
+          transmission={0.8}
+          transparent
+          opacity={0.55}
+          thickness={0.5}
+          roughness={0.05}
+          metalness={0.1}
+          ior={1.45}
+          clearcoat={1}
+          emissive={COLORS.warm}
+          emissiveIntensity={0.35}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+      <mesh>
+        <planeGeometry args={[width + thickness * 0.3, height + thickness * 0.3]} />
+        <meshBasicMaterial
+          color={COLORS.cyan}
+          transparent
+          opacity={0.08}
+          side={THREE.DoubleSide}
+          depthWrite={false}
+          toneMapped={false}
+        />
+      </mesh>
+    </group>
+  )
+}
+
+export function DoorLeaf() {
+  return (
+    <group>
+      <mesh castShadow>
+        <boxGeometry args={[0.9, 2.0, 0.05]} />
+        <meshStandardMaterial color={COLORS.darkWood} roughness={0.6} metalness={0.2} />
+      </mesh>
+      {[
+        [0, 0.45],
+        [0, -0.2],
+      ].map((p, i) => (
+        <mesh key={i} position={[p[0], p[1], 0.028]}>
+          <boxGeometry args={[0.65, 0.45, 0.01]} />
+          <meshStandardMaterial color="#18100a" roughness={0.7} />
+        </mesh>
+      ))}
+      <mesh position={[0, 0.7, 0.028]}>
+        <planeGeometry args={[0.5, 0.25]} />
+        <meshPhysicalMaterial
+          color="#0a2033"
+          transmission={0.85}
+          transparent
+          opacity={0.55}
+          thickness={0.2}
+          roughness={0.05}
+          metalness={0.1}
+          ior={1.45}
+          emissive={COLORS.warm}
+          emissiveIntensity={0.5}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+      <mesh position={[0.32, 0, 0.04]}>
+        <cylinderGeometry args={[0.03, 0.03, 0.14, 12]} />
+        <meshStandardMaterial color={COLORS.brass} metalness={1} roughness={0.25} />
+      </mesh>
+      <mesh position={[0.32, 0, 0.09]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.025, 0.025, 0.08, 12]} />
+        <meshStandardMaterial color={COLORS.brass} metalness={1} roughness={0.25} />
+      </mesh>
+      <mesh position={[0, -1, 0.03]}>
+        <boxGeometry args={[0.9, 0.02, 0.005]} />
+        <meshStandardMaterial
+          color={COLORS.cyan}
+          emissive={COLORS.cyan}
+          emissiveIntensity={2.2}
+          toneMapped={false}
+        />
+      </mesh>
+    </group>
+  )
+}
+
+export function Porch() {
+  return (
+    <group>
+      <mesh position={[0, -0.05, 0]} castShadow receiveShadow>
+        <boxGeometry args={[1.8, 0.1, 1.3]} />
+        <meshStandardMaterial color={COLORS.darkWood} roughness={0.8} metalness={0.1} />
+      </mesh>
+      {Array.from({ length: 6 }).map((_, i) => (
+        <mesh key={i} position={[0, 0.001, -0.55 + i * 0.22]}>
+          <boxGeometry args={[1.75, 0.005, 0.005]} />
+          <meshStandardMaterial color="#05030a" />
+        </mesh>
+      ))}
+      {[
+        [-0.85, -0.4, -0.6],
+        [0.85, -0.4, -0.6],
+        [-0.85, -0.4, 0.6],
+        [0.85, -0.4, 0.6],
+      ].map((p, i) => (
+        <mesh key={i} position={p} castShadow>
+          <boxGeometry args={[0.08, 0.6, 0.08]} />
+          <meshStandardMaterial color="#12141c" metalness={0.9} roughness={0.4} />
+        </mesh>
+      ))}
+      <mesh position={[0, 0.45, 0.6]}>
+        <boxGeometry args={[1.7, 0.04, 0.04]} />
+        <meshStandardMaterial color={COLORS.darkMetal} metalness={0.8} roughness={0.35} />
+      </mesh>
+      {Array.from({ length: 9 }).map((_, i) => (
+        <mesh key={i} position={[-0.8 + i * 0.2, 0.2, 0.6]} castShadow>
+          <boxGeometry args={[0.02, 0.5, 0.02]} />
+          <meshStandardMaterial color={COLORS.darkMetal} metalness={0.8} roughness={0.35} />
+        </mesh>
+      ))}
+      <mesh position={[0, -0.12, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[1.7, 1.2]} />
+        <meshBasicMaterial
+          color={COLORS.cyan}
+          transparent
+          opacity={0.28}
+          toneMapped={false}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+      {[0, 1, 2].map((i) => (
+        <mesh
+          key={i}
+          position={[0, -0.15 - i * 0.16, 0.75 + i * 0.24]}
+          castShadow
+          receiveShadow
+        >
+          <boxGeometry args={[1.2, 0.12, 0.26]} />
+          <meshStandardMaterial color={COLORS.darkWood} roughness={0.8} />
+        </mesh>
+      ))}
+    </group>
+  )
+}
+
+export function Awning() {
+  return (
+    <group>
+      <mesh castShadow rotation={[-0.25, 0, 0]}>
+        <boxGeometry args={[1.8, 0.06, 0.9]} />
+        <meshStandardMaterial color="#0c0c14" metalness={0.7} roughness={0.5} />
+      </mesh>
+      {[-0.8, 0.8].map((x, i) => (
+        <mesh key={i} position={[x, -0.2, 0.4]} rotation={[0.4, 0, 0]}>
+          <cylinderGeometry args={[0.02, 0.02, 0.6, 8]} />
+          <meshStandardMaterial color="#2a2d35" metalness={1} />
+        </mesh>
+      ))}
+      <mesh position={[0, -0.04, 0.42]} rotation={[-0.25, 0, 0]}>
+        <boxGeometry args={[1.75, 0.012, 0.01]} />
+        <meshStandardMaterial
+          color={COLORS.cyan}
+          emissive={COLORS.cyan}
+          emissiveIntensity={2}
+          toneMapped={false}
+        />
+      </mesh>
+    </group>
+  )
+}
+
+export function DetailedSolarPanel({ cellTex }) {
+  return (
+    <group>
+      <mesh castShadow>
+        <boxGeometry args={[3.4, 0.06, 1.2]} />
+        <meshStandardMaterial
+          map={cellTex}
+          color="#ffffff"
+          roughness={0.2}
+          metalness={0.85}
+          emissive="#1a2a4a"
+          emissiveIntensity={0.2}
+        />
+      </mesh>
+      {[
+        [0, 0.035, 0.6],
+        [0, 0.035, -0.6],
+      ].map((p, i) => (
+        <mesh key={`f1-${i}`} position={p}>
+          <boxGeometry args={[3.4, 0.08, 0.04]} />
+          <meshStandardMaterial color="#3a3f4a" metalness={1} roughness={0.3} />
+        </mesh>
+      ))}
+      {[
+        [1.7, 0.035, 0],
+        [-1.7, 0.035, 0],
+      ].map((p, i) => (
+        <mesh key={`f2-${i}`} position={p}>
+          <boxGeometry args={[0.04, 0.08, 1.2]} />
+          <meshStandardMaterial color="#3a3f4a" metalness={1} roughness={0.3} />
+        </mesh>
+      ))}
+      {[-0.5, 0.5].map((x, i) => (
+        <mesh key={i} position={[x, -0.06, 0]}>
+          <boxGeometry args={[0.08, 0.06, 1]} />
+          <meshStandardMaterial color="#2a2d35" metalness={1} roughness={0.4} />
+        </mesh>
+      ))}
+      <Edges threshold={15} color={COLORS.cyan} scale={1.001} />
+    </group>
+  )
+}
+
+export function VentPipe() {
+  return (
+    <group>
+      <mesh position={[0, 0.18, 0]} castShadow>
+        <cylinderGeometry args={[0.08, 0.08, 0.36, 16]} />
+        <meshStandardMaterial color={COLORS.brightMetal} metalness={1} roughness={0.35} />
+      </mesh>
+      <mesh position={[0, 0.42, 0]}>
+        <cylinderGeometry args={[0.11, 0.08, 0.08, 16]} />
+        <meshStandardMaterial color="#8a8f99" metalness={1} roughness={0.4} />
+      </mesh>
+      <mesh position={[0, 0.46, 0]}>
+        <cylinderGeometry args={[0.12, 0.12, 0.015, 16]} />
+        <meshStandardMaterial color="#2a2d35" />
+      </mesh>
+    </group>
+  )
+}
+
+export function Skylight({ w = 1.2, l = 0.9 }) {
+  return (
+    <group>
+      <mesh position={[0, 0.03, 0]}>
+        <boxGeometry args={[w + 0.12, 0.06, l + 0.12]} />
+        <meshStandardMaterial color="#1a1f2a" metalness={0.9} roughness={0.3} />
+      </mesh>
+      <mesh position={[0, 0.08, 0]}>
+        <boxGeometry args={[w, 0.04, l]} />
+        <meshPhysicalMaterial
+          color="#0a2033"
+          transmission={0.9}
+          transparent
+          opacity={0.55}
+          thickness={0.4}
+          roughness={0.03}
+          ior={1.45}
+          clearcoat={1}
+          emissive={COLORS.warm}
+          emissiveIntensity={0.5}
+        />
+      </mesh>
+      <mesh position={[0, 0.105, 0]}>
+        <boxGeometry args={[w, 0.01, 0.02]} />
+        <meshStandardMaterial color="#1a1f2a" metalness={0.9} />
+      </mesh>
+    </group>
+  )
+}
+
+export function Antenna() {
+  return (
+    <group>
+      <mesh position={[0, 0.5, 0]}>
+        <cylinderGeometry args={[0.012, 0.02, 1.0, 8]} />
+        <meshStandardMaterial color={COLORS.brightMetal} metalness={1} />
+      </mesh>
+      <mesh position={[0, 1.05, 0]}>
+        <sphereGeometry args={[0.05, 12, 12]} />
+        <meshStandardMaterial
+          color={COLORS.cyan}
+          emissive={COLORS.cyan}
+          emissiveIntensity={3}
+          toneMapped={false}
+        />
+      </mesh>
+      <mesh position={[0, 0.75, 0]}>
+        <boxGeometry args={[0.3, 0.015, 0.015]} />
+        <meshStandardMaterial color={COLORS.brightMetal} metalness={1} />
+      </mesh>
+      <mesh position={[0, 0.6, 0]}>
+        <boxGeometry args={[0.22, 0.015, 0.015]} />
+        <meshStandardMaterial color={COLORS.brightMetal} metalness={1} />
+      </mesh>
+    </group>
+  )
+}
+
+export function Gutter({ length }) {
+  return (
+    <group>
+      <mesh rotation={[0, 0, Math.PI / 2]} castShadow>
+        <cylinderGeometry args={[0.04, 0.04, length, 12, 1, true, 0, Math.PI]} />
+        <meshStandardMaterial
+          color={COLORS.darkMetal}
+          metalness={1}
+          roughness={0.4}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+    </group>
+  )
+}
+
+export function WallLamp({ position }) {
+  return (
+    <group position={position}>
+      <mesh>
+        <boxGeometry args={[0.08, 0.16, 0.08]} />
+        <meshStandardMaterial color={COLORS.darkMetal} metalness={0.8} />
+      </mesh>
+      <mesh position={[0, 0, 0.05]}>
+        <sphereGeometry args={[0.045, 12, 12]} />
+        <meshStandardMaterial
+          color="#ffe0a0"
+          emissive={COLORS.warm}
+          emissiveIntensity={3}
+          toneMapped={false}
+        />
+      </mesh>
+    </group>
+  )
+}
+
+export function StringLight({ length = 7, above = 0.2 }) {
+  const count = 18
+  return (
+    <group>
+      {Array.from({ length: count }).map((_, i) => {
+        const t = i / (count - 1)
+        const x = -length / 2 + t * length
+        const dip = Math.sin(t * Math.PI) * 0.12
+        return (
+          <group key={i} position={[x, above - dip, 0]}>
+            <mesh>
+              <sphereGeometry args={[0.04, 10, 10]} />
+              <meshStandardMaterial
+                color="#ffd28a"
+                emissive={COLORS.warm}
+                emissiveIntensity={2.2}
+                toneMapped={false}
+              />
+            </mesh>
+          </group>
+        )
+      })}
+      {Array.from({ length: count - 1 }).map((_, i) => {
+        const t1 = i / (count - 1)
+        const t2 = (i + 1) / (count - 1)
+        const x1 = -length / 2 + t1 * length
+        const x2 = -length / 2 + t2 * length
+        const y1 = above - Math.sin(t1 * Math.PI) * 0.12
+        const y2 = above - Math.sin(t2 * Math.PI) * 0.12
+        const mx = (x1 + x2) / 2
+        const my = (y1 + y2) / 2
+        const dx = x2 - x1
+        const dy = y2 - y1
+        const len = Math.hypot(dx, dy)
+        const angle = Math.atan2(dy, dx)
+        return (
+          <mesh key={`w-${i}`} position={[mx, my, 0]} rotation={[0, 0, angle]}>
+            <boxGeometry args={[len, 0.008, 0.008]} />
+            <meshStandardMaterial color="#0a0a12" />
+          </mesh>
+        )
+      })}
+    </group>
+  )
+}
+
+/** Wall built from `THREE.ExtrudeGeometry` so window/door holes are true
+    see-through openings — not just planes stuck on a solid box.
+    `holes` is an array of { shape: 'rect'|'circle', cx, cy, w, h } | { …, r }. */
+export function CutoutWall({
+  width,
+  height,
+  thickness,
+  holes = [],
+  map,
+  color = '#ffffff',
+  roughness = 0.75,
+}) {
+  const geometry = useMemo(() => {
+    const shape = new THREE.Shape()
+    shape.moveTo(-width / 2, -height / 2)
+    shape.lineTo(width / 2, -height / 2)
+    shape.lineTo(width / 2, height / 2)
+    shape.lineTo(-width / 2, height / 2)
+    shape.closePath()
+
+    for (const hole of holes) {
+      const path = new THREE.Path()
+      if (hole.shape === 'circle') {
+        path.absarc(hole.cx, hole.cy, hole.r, 0, Math.PI * 2, false)
+      } else {
+        const { cx, cy, w, h } = hole
+        path.moveTo(cx - w / 2, cy - h / 2)
+        path.lineTo(cx + w / 2, cy - h / 2)
+        path.lineTo(cx + w / 2, cy + h / 2)
+        path.lineTo(cx - w / 2, cy + h / 2)
+        path.closePath()
+      }
+      shape.holes.push(path)
+    }
+
+    const halfW = width / 2
+    const halfH = height / 2
+    const uvGenerator = {
+      generateTopUV(_geom, vertices, indexA, indexB, indexC) {
+        const topUV = (i) =>
+          new THREE.Vector2(
+            (vertices[i * 3] + halfW) / width,
+            (vertices[i * 3 + 1] + halfH) / height
+          )
+        return [topUV(indexA), topUV(indexB), topUV(indexC)]
+      },
+      generateSideWallUV() {
+        return [
+          new THREE.Vector2(0, 0),
+          new THREE.Vector2(1, 0),
+          new THREE.Vector2(1, 1),
+          new THREE.Vector2(0, 1),
+        ]
+      },
+    }
+
+    const geom = new THREE.ExtrudeGeometry(shape, {
+      depth: thickness,
+      bevelEnabled: false,
+      steps: 1,
+      UVGenerator: uvGenerator,
+    })
+    // Centre the extrusion along Z so the wall's mid-plane is at z=0.
+    geom.translate(0, 0, -thickness / 2)
+    geom.computeVertexNormals()
+    return geom
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [width, height, thickness, JSON.stringify(holes)])
+
+  return (
+    <mesh geometry={geometry} castShadow receiveShadow>
+      <meshStandardMaterial map={map} color={color} roughness={roughness} />
+    </mesh>
+  )
+}
+
+/** Triangular gable panel to cap a short-end wall under the pitched roof. */
+export function GableTriangle({ material }) {
+  return (
+    <mesh castShadow>
+      <bufferGeometry>
+        <bufferAttribute
+          attach="attributes-position"
+          args={[
+            new Float32Array([
+              -W / 2, 0, 0,
+               W / 2, 0, 0,
+               0, ROOF_PITCH, 0,
+            ]),
+            3,
+          ]}
+        />
+        <bufferAttribute
+          attach="attributes-normal"
+          args={[new Float32Array([0, 0, 1, 0, 0, 1, 0, 0, 1]), 3]}
+        />
+        <bufferAttribute
+          attach="attributes-uv"
+          args={[new Float32Array([0, 0, 1, 0, 0.5, 1]), 2]}
+        />
+      </bufferGeometry>
+      {material}
+    </mesh>
+  )
+}
+
+/* ------------------------------------------------------------
+   4. INTERIOR FURNITURE (modules that rise on explode)
+   ------------------------------------------------------------ */
+
+export function KitchenModule() {
+  return (
+    <group>
+      {/* Counter body */}
+      <RoundedBox args={[1.8, 0.9, 0.7]} radius={0.03} smoothness={3} castShadow>
+        <meshStandardMaterial color="#1a1a22" roughness={0.5} metalness={0.4} />
+      </RoundedBox>
+      {/* Worktop */}
+      <mesh position={[0, 0.46, 0]}>
+        <boxGeometry args={[1.8, 0.02, 0.7]} />
+        <meshStandardMaterial color="#3a3f4a" metalness={0.9} roughness={0.25} />
+      </mesh>
+      {/* Sink */}
+      <mesh position={[-0.45, 0.47, 0]}>
+        <boxGeometry args={[0.5, 0.03, 0.4]} />
+        <meshStandardMaterial color={COLORS.deepDark} roughness={0.9} />
+      </mesh>
+      {/* Faucet */}
+      <mesh position={[-0.45, 0.62, -0.2]}>
+        <cylinderGeometry args={[0.015, 0.015, 0.3, 10]} />
+        <meshStandardMaterial color={COLORS.brightMetal} metalness={1} roughness={0.2} />
+      </mesh>
+      <mesh position={[-0.45, 0.76, -0.1]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.014, 0.014, 0.22, 10]} />
+        <meshStandardMaterial color={COLORS.brightMetal} metalness={1} roughness={0.2} />
+      </mesh>
+      {/* Stove surface */}
+      <mesh position={[0.45, 0.47, 0]}>
+        <boxGeometry args={[0.55, 0.025, 0.5]} />
+        <meshStandardMaterial color="#0a0a10" metalness={0.8} roughness={0.3} />
+      </mesh>
+      {/* Burners */}
+      {[
+        [0.3, 0.12],
+        [0.6, 0.12],
+        [0.3, -0.12],
+        [0.6, -0.12],
+      ].map((p, i) => (
+        <mesh key={i} position={[p[0], 0.49, p[1]]}>
+          <torusGeometry args={[0.05, 0.008, 8, 20]} />
+          <meshStandardMaterial
+            color={COLORS.cyan}
+            emissive={COLORS.cyan}
+            emissiveIntensity={2}
+            toneMapped={false}
+          />
+        </mesh>
+      ))}
+      {/* Cabinet doors */}
+      {[-0.6, -0.2, 0.2, 0.6].map((x, i) => (
+        <group key={i}>
+          <mesh position={[x, 0, 0.355]}>
+            <boxGeometry args={[0.35, 0.8, 0.01]} />
+            <meshStandardMaterial color="#24242e" roughness={0.55} />
+          </mesh>
+          <mesh position={[x + 0.12, 0, 0.365]}>
+            <cylinderGeometry args={[0.01, 0.01, 0.08, 8]} />
+            <meshStandardMaterial color={COLORS.brightMetal} metalness={1} />
+          </mesh>
+        </group>
+      ))}
+      {/* Upper cabinet */}
+      <mesh position={[0, 1.2, -0.2]} castShadow>
+        <boxGeometry args={[1.8, 0.5, 0.35]} />
+        <meshStandardMaterial color="#1a1a22" roughness={0.55} />
+      </mesh>
+      {/* Under-cabinet LED */}
+      <mesh position={[0, 0.92, 0]}>
+        <boxGeometry args={[1.7, 0.01, 0.02]} />
+        <meshStandardMaterial
+          color={COLORS.warm}
+          emissive={COLORS.warm}
+          emissiveIntensity={2.4}
+          toneMapped={false}
+        />
+      </mesh>
+    </group>
+  )
+}
+
+export function LoftBedModule() {
+  return (
+    <group>
+      <mesh castShadow>
+        <boxGeometry args={[1.9, 0.1, 1.8]} />
+        <meshStandardMaterial color="#1a1a22" roughness={0.6} />
+      </mesh>
+      <RoundedBox
+        args={[1.85, 0.22, 1.75]}
+        radius={0.04}
+        smoothness={3}
+        position={[0, 0.14, 0]}
+        castShadow
+      >
+        <meshStandardMaterial color="#e6e2d6" roughness={0.9} />
+      </RoundedBox>
+      <mesh position={[0, 0.26, 0.12]}>
+        <boxGeometry args={[1.8, 0.04, 1.4]} />
+        <meshStandardMaterial color="#3a4866" roughness={0.95} />
+      </mesh>
+      {[-0.5, 0.5].map((x, i) => (
+        <RoundedBox
+          key={i}
+          args={[0.7, 0.1, 0.45]}
+          radius={0.04}
+          smoothness={3}
+          position={[x, 0.3, -0.6]}
+        >
+          <meshStandardMaterial color="#fbf4e4" roughness={0.9} />
+        </RoundedBox>
+      ))}
+      <mesh position={[0, -0.055, 0]}>
+        <boxGeometry args={[1.7, 0.01, 1.6]} />
+        <meshStandardMaterial
+          color={COLORS.violet}
+          emissive={COLORS.violet}
+          emissiveIntensity={1.6}
+          toneMapped={false}
+        />
+      </mesh>
+    </group>
+  )
+}
+
+/** Bathroom pod. Shower glass + door are on the module's LOCAL -Z face,
+    so when you place it against the back wall the door opens INTO the
+    house, not into the wall. */
+export function BathroomModule() {
+  return (
+    <group>
+      <RoundedBox args={[1.2, 1.8, 0.9]} radius={0.04} smoothness={3} castShadow>
+        <meshStandardMaterial color="#1a1a22" roughness={0.5} metalness={0.3} />
+      </RoundedBox>
+      {/* Glass shower wall (front, -Z) */}
+      <mesh position={[0.3, 0, -0.46]}>
+        <planeGeometry args={[0.5, 1.6]} />
+        <meshPhysicalMaterial
+          color="#0a2033"
+          transmission={0.85}
+          transparent
+          opacity={0.55}
+          thickness={0.3}
+          roughness={0.05}
+          ior={1.45}
+          emissive="#7aa0ff"
+          emissiveIntensity={0.25}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+      {/* Wooden door panel */}
+      <mesh position={[-0.3, 0, -0.46]}>
+        <boxGeometry args={[0.55, 1.7, 0.02]} />
+        <meshStandardMaterial color={COLORS.darkWood} roughness={0.6} />
+      </mesh>
+      {/* Brass handle */}
+      <mesh position={[-0.08, 0, -0.48]}>
+        <cylinderGeometry args={[0.022, 0.022, 0.1, 10]} />
+        <meshStandardMaterial color={COLORS.brass} metalness={1} roughness={0.25} />
+      </mesh>
+      {/* Skylight panel on top */}
+      <mesh position={[0, 0.92, 0]}>
+        <boxGeometry args={[1.0, 0.01, 0.7]} />
+        <meshStandardMaterial
+          color={COLORS.warm}
+          emissive={COLORS.warm}
+          emissiveIntensity={2}
+          toneMapped={false}
+        />
+      </mesh>
+      <Edges threshold={15} color={COLORS.cyan} scale={1.001} />
+    </group>
+  )
+}
+
+export function SofaModule() {
+  return (
+    <group>
+      <RoundedBox args={[2.0, 0.5, 0.8]} radius={0.06} smoothness={3} castShadow>
+        <meshStandardMaterial color="#1a1a22" roughness={0.6} />
+      </RoundedBox>
+      {[-0.65, 0, 0.65].map((x, i) => (
+        <RoundedBox
+          key={i}
+          args={[0.6, 0.18, 0.7]}
+          radius={0.05}
+          smoothness={3}
+          position={[x, 0.3, 0.02]}
+        >
+          <meshStandardMaterial color="#3a4258" roughness={0.85} />
+        </RoundedBox>
+      ))}
+      {[-0.65, 0, 0.65].map((x, i) => (
+        <RoundedBox
+          key={`b-${i}`}
+          args={[0.56, 0.35, 0.18]}
+          radius={0.04}
+          smoothness={3}
+          position={[x, 0.5, -0.28]}
+        >
+          <meshStandardMaterial color="#2b3244" roughness={0.9} />
+        </RoundedBox>
+      ))}
+      <RoundedBox
+        args={[0.3, 0.1, 0.3]}
+        radius={0.04}
+        smoothness={3}
+        position={[0.75, 0.42, -0.05]}
+      >
+        <meshStandardMaterial color="#c98b4a" roughness={0.9} />
+      </RoundedBox>
+      {[
+        [-0.9, -0.27, 0.3],
+        [0.9, -0.27, 0.3],
+        [-0.9, -0.27, -0.3],
+        [0.9, -0.27, -0.3],
+      ].map((p, i) => (
+        <mesh key={i} position={p}>
+          <boxGeometry args={[0.06, 0.12, 0.06]} />
+          <meshStandardMaterial color={COLORS.brightMetal} metalness={1} roughness={0.3} />
+        </mesh>
+      ))}
+      <mesh position={[0, -0.27, 0]}>
+        <boxGeometry args={[1.8, 0.01, 0.6]} />
+        <meshStandardMaterial
+          color={COLORS.violet}
+          emissive={COLORS.violet}
+          emissiveIntensity={1.4}
+          toneMapped={false}
+        />
+      </mesh>
+    </group>
+  )
+}
+
+export function DiningModule() {
+  return (
+    <group>
+      <mesh position={[0, 0.34, 0]} castShadow>
+        <boxGeometry args={[1.0, 0.04, 0.6]} />
+        <meshStandardMaterial color={COLORS.darkWood} roughness={0.55} />
+      </mesh>
+      <mesh position={[0, 0, 0]}>
+        <cylinderGeometry args={[0.04, 0.06, 0.7, 12]} />
+        <meshStandardMaterial color={COLORS.darkMetal} metalness={1} roughness={0.3} />
+      </mesh>
+      <mesh position={[0, -0.35, 0]}>
+        <cylinderGeometry args={[0.2, 0.25, 0.04, 16]} />
+        <meshStandardMaterial color={COLORS.darkMetal} metalness={1} roughness={0.3} />
+      </mesh>
+      <mesh position={[0.25, 0.42, 0]} castShadow>
+        <cylinderGeometry args={[0.08, 0.06, 0.14, 12]} />
+        <meshStandardMaterial color="#3a2a1c" roughness={0.8} />
+      </mesh>
+      {Array.from({ length: 5 }).map((_, i) => {
+        const a = (i / 5) * Math.PI * 2
+        return (
+          <mesh
+            key={i}
+            position={[0.25 + Math.cos(a) * 0.06, 0.57, Math.sin(a) * 0.06]}
+            rotation={[0.2, a, 0.2]}
+          >
+            <coneGeometry args={[0.05, 0.22, 5]} />
+            <meshStandardMaterial color="#3a6044" roughness={0.8} />
+          </mesh>
+        )
+      })}
+      <mesh position={[-0.2, 0.4, 0.1]}>
+        <cylinderGeometry args={[0.035, 0.03, 0.08, 12]} />
+        <meshStandardMaterial color="#e0e4ea" roughness={0.5} />
+      </mesh>
+    </group>
+  )
+}
+
+export function BatteryModule() {
+  return (
+    <group>
+      <RoundedBox args={[1.4, 0.5, 0.5]} radius={0.03} smoothness={3} castShadow>
+        <meshStandardMaterial color="#14141c" metalness={0.8} roughness={0.4} />
+      </RoundedBox>
+      {Array.from({ length: 8 }).map((_, i) => (
+        <mesh key={i} position={[-0.6 + i * 0.17, 0, 0.252]}>
+          <boxGeometry args={[0.1, 0.3, 0.005]} />
+          <meshStandardMaterial color={COLORS.deepDark} />
+        </mesh>
+      ))}
+      <mesh position={[0, 0.1, 0.253]}>
+        <planeGeometry args={[0.4, 0.1]} />
+        <meshStandardMaterial
+          color={COLORS.cyan}
+          emissive={COLORS.cyan}
+          emissiveIntensity={1.6}
+          toneMapped={false}
+        />
+      </mesh>
+      {[-0.2, -0.1, 0, 0.1, 0.2].map((x, i) => (
+        <mesh key={i} position={[x + 0.4, -0.1, 0.253]}>
+          <sphereGeometry args={[0.015, 8, 8]} />
+          <meshStandardMaterial
+            color={i < 4 ? '#4aff88' : '#ff8a4a'}
+            emissive={i < 4 ? '#4aff88' : '#ff8a4a'}
+            emissiveIntensity={3}
+            toneMapped={false}
+          />
+        </mesh>
+      ))}
+      <Edges threshold={15} color={COLORS.cyan} scale={1.001} />
+    </group>
+  )
+}
+
+export function WaterTank() {
+  return (
+    <group>
+      <mesh rotation={[0, 0, Math.PI / 2]} castShadow>
+        <cylinderGeometry args={[0.3, 0.3, 1.0, 24]} />
+        <meshStandardMaterial color={COLORS.brightMetal} metalness={0.9} roughness={0.35} />
+      </mesh>
+      {[-0.5, 0.5].map((x, i) => (
+        <mesh key={i} position={[x, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+          <sphereGeometry args={[0.3, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2]} />
+          <meshStandardMaterial color="#a0a6b0" metalness={1} roughness={0.3} />
+        </mesh>
+      ))}
+      <mesh position={[0, 0.32, 0]}>
+        <cylinderGeometry args={[0.04, 0.04, 0.12, 12]} />
+        <meshStandardMaterial color="#2a2d35" metalness={1} />
+      </mesh>
+      <mesh position={[0, 0, 0.3]}>
+        <boxGeometry args={[0.18, 0.06, 0.01]} />
+        <meshStandardMaterial
+          color={COLORS.cyan}
+          emissive={COLORS.cyan}
+          emissiveIntensity={1.6}
+          toneMapped={false}
+        />
+      </mesh>
+    </group>
+  )
+}
+
+export function LoftLadder() {
+  return (
+    <group>
+      {[-0.2, 0.2].map((x, i) => (
+        <mesh key={i} position={[x, 0, 0]} castShadow>
+          <boxGeometry args={[0.04, 2.2, 0.04]} />
+          <meshStandardMaterial color={COLORS.darkWood} roughness={0.6} />
+        </mesh>
+      ))}
+      {Array.from({ length: 7 }).map((_, i) => (
+        <mesh
+          key={i}
+          position={[0, -1.0 + i * 0.3, 0]}
+          rotation={[0, 0, Math.PI / 2]}
+        >
+          <cylinderGeometry args={[0.02, 0.02, 0.5, 10]} />
+          <meshStandardMaterial color={COLORS.brightMetal} metalness={1} roughness={0.35} />
+        </mesh>
+      ))}
+    </group>
+  )
+}
+
+export function PropaneTank() {
+  return (
+    <group>
+      <mesh castShadow>
+        <cylinderGeometry args={[0.18, 0.18, 0.5, 20]} />
+        <meshStandardMaterial color="#d0d6e0" metalness={0.8} roughness={0.3} />
+      </mesh>
+      <mesh position={[0, 0.3, 0]}>
+        <cylinderGeometry args={[0.04, 0.04, 0.1, 12]} />
+        <meshStandardMaterial color="#2a2d35" metalness={1} />
+      </mesh>
+    </group>
+  )
+}
+
+/* ------------------------------------------------------------
+   5. ENVIRONMENT (trees, rocks, path, flying birds, dog)
+   All placed so that their BASE sits on y = 0 of their group
+   — you anchor them to the ground by setting group.y = GROUND_Y.
+   ------------------------------------------------------------ */
+
+export function PineTree({ position, scale = 1 }) {
+  return (
+    <group position={position} scale={scale}>
+      <mesh castShadow position={[0, 0.5, 0]}>
+        <cylinderGeometry args={[0.12, 0.18, 1, 10]} />
+        <meshStandardMaterial color={COLORS.darkWood} roughness={0.95} />
+      </mesh>
+      {[0, 1, 2].map((i) => {
+        const y = 1.1 + i * 0.55
+        const r = 0.7 - i * 0.16
+        return (
+          <mesh key={i} position={[0, y, 0]} castShadow>
+            <coneGeometry args={[r, 0.85, 7]} />
+            <meshStandardMaterial
+              color={`hsl(${135 + i * 4}, 48%, ${22 + i * 3}%)`}
+              roughness={0.95}
+            />
+          </mesh>
+        )
+      })}
+      {Array.from({ length: 6 }).map((_, i) => {
+        const a = (i / 6) * Math.PI * 2
+        return (
+          <mesh
+            key={i}
+            position={[Math.cos(a) * 0.55, 1.35 + Math.sin(a) * 0.2, Math.sin(a) * 0.55]}
+          >
+            <sphereGeometry args={[0.025, 8, 8]} />
+            <meshStandardMaterial
+              color={COLORS.warm}
+              emissive={COLORS.warm}
+              emissiveIntensity={2.2}
+              toneMapped={false}
+            />
+          </mesh>
+        )
+      })}
+    </group>
+  )
+}
+
+export function Rock({ position, scale = 1, seed = 0 }) {
+  // Rotation derived from seed so it's stable across re-renders.
+  const s = seed
+  return (
+    <mesh
+      position={position}
+      scale={scale}
+      rotation={[s * 0.7, s * 1.3, s * 0.9]}
+      castShadow
+      receiveShadow
+    >
+      <dodecahedronGeometry args={[0.5, 0]} />
+      <meshStandardMaterial color="#1a1d26" roughness={0.95} metalness={0.1} />
+    </mesh>
+  )
+}
+
+export function PathStone({ position, rotation = 0 }) {
+  return (
+    <mesh position={position} rotation={[-Math.PI / 2, 0, rotation]} receiveShadow>
+      <circleGeometry args={[0.38, 10]} />
+      <meshStandardMaterial color="#2a2d35" roughness={0.9} />
+    </mesh>
+  )
+}
+
+export function Birds() {
+  const ref = useRef()
+  useFrame((state) => {
+    if (!ref.current) return
+    const t = state.clock.elapsedTime
+    ref.current.rotation.y = t * 0.15
+    ref.current.children.forEach((child, i) => {
+      const offset = (i * Math.PI * 2) / 3
+      child.position.x = Math.cos(t * 0.4 + offset) * 9
+      child.position.z = Math.sin(t * 0.4 + offset) * 9
+      child.position.y = 4.5 + Math.sin(t * 0.7 + i) * 0.4
+      child.rotation.y = t * 0.4 + offset + Math.PI / 2
+      child.children.forEach((w, wi) => {
+        if (wi < 1) return
+        w.rotation.z = Math.sin(t * 10 + i) * (wi === 1 ? 0.6 : -0.6)
+      })
+    })
+  })
+  return (
+    <group ref={ref}>
+      {[0, 1, 2].map((i) => (
+        <group key={i}>
+          <mesh>
+            <sphereGeometry args={[0.05, 8, 8]} />
+            <meshStandardMaterial color="#0a0a10" />
+          </mesh>
+          <mesh position={[0, 0, -0.06]}>
+            <boxGeometry args={[0.2, 0.01, 0.06]} />
+            <meshStandardMaterial color="#0a0a10" />
+          </mesh>
+          <mesh position={[0, 0, 0.06]}>
+            <boxGeometry args={[0.2, 0.01, 0.06]} />
+            <meshStandardMaterial color="#0a0a10" />
+          </mesh>
+        </group>
+      ))}
+    </group>
+  )
+}
+
+/** Shiba-style companion dog. Its feet touch y=0 of its group,
+    so parent it at `position=[x, GROUND_Y, z]` to sit on the ground. */
+export function Dog({ position = [5.4, 0, 1.6], facing = -0.4 }) {
+  const body = useRef()
+  const head = useRef()
+  const tail = useRef()
+  const leftEar = useRef()
+  const rightEar = useRef()
+
+  // Offsets so paw bottom is at y=0 of the outer group.
+  // paw bottom = body.y(0.58) + leg offset(-0.3) + paw offset(-0.2) - paw radius(0.08) = 0
+  const BODY_Y = 0.58
+
+  useFrame((state) => {
+    if (!body.current) return
+    const t = state.clock.elapsedTime
+    body.current.position.y = BODY_Y + Math.sin(t * 2) * 0.02
+    if (head.current) head.current.rotation.y = Math.sin(t * 0.8) * 0.18
+    if (tail.current) tail.current.rotation.z = Math.sin(t * 7) * 0.45 - 0.25
+    if (leftEar.current) leftEar.current.rotation.x = Math.sin(t * 3) * 0.1
+    if (rightEar.current) rightEar.current.rotation.x = Math.sin(t * 3 + 0.4) * 0.1
+  })
+
+  const furA = '#c98b4a'
+  const furB = '#f4d8a8'
+  const furC = '#2a1a10'
+
+  return (
+    <group position={position} rotation={[0, facing, 0]}>
+      <group ref={body} position={[0, BODY_Y, 0]}>
+        {/* Torso */}
+        <RoundedBox args={[0.85, 0.4, 0.36]} radius={0.1} smoothness={4} castShadow>
+          <meshStandardMaterial color={furA} roughness={0.85} />
+        </RoundedBox>
+        <RoundedBox
+          args={[0.8, 0.22, 0.3]}
+          radius={0.08}
+          smoothness={3}
+          position={[0, -0.15, 0]}
+        >
+          <meshStandardMaterial color={furB} roughness={0.9} />
+        </RoundedBox>
+
+        {/* Neck */}
+        <mesh position={[0.44, 0.08, 0]} rotation={[0, 0, 0.2]}>
+          <cylinderGeometry args={[0.12, 0.15, 0.2, 14]} />
+          <meshStandardMaterial color={furA} roughness={0.85} />
+        </mesh>
+
+        {/* Head */}
+        <group ref={head} position={[0.55, 0.22, 0]}>
+          <RoundedBox args={[0.32, 0.3, 0.3]} radius={0.08} smoothness={4} castShadow>
+            <meshStandardMaterial color={furA} roughness={0.85} />
+          </RoundedBox>
+          <mesh position={[0.22, -0.05, 0]}>
+            <boxGeometry args={[0.14, 0.14, 0.18]} />
+            <meshStandardMaterial color={furB} roughness={0.85} />
+          </mesh>
+          <mesh position={[0.3, -0.02, 0]}>
+            <sphereGeometry args={[0.028, 12, 12]} />
+            <meshStandardMaterial color="#050508" roughness={0.4} metalness={0.3} />
+          </mesh>
+          {[0.08, -0.08].map((z, i) => (
+            <mesh key={`cheek-${i}`} position={[0.16, -0.02, z]}>
+              <sphereGeometry args={[0.055, 12, 12]} />
+              <meshStandardMaterial color={furB} roughness={0.9} />
+            </mesh>
+          ))}
+          {[0.08, -0.08].map((z, i) => (
+            <mesh key={`eye-${i}`} position={[0.15, 0.05, z]}>
+              <sphereGeometry args={[0.025, 12, 12]} />
+              <meshStandardMaterial color="#050508" roughness={0.3} metalness={0.5} />
+            </mesh>
+          ))}
+          {[0.08, -0.08].map((z, i) => (
+            <mesh key={`eye-shine-${i}`} position={[0.172, 0.06, z]}>
+              <sphereGeometry args={[0.008, 8, 8]} />
+              <meshStandardMaterial
+                color={COLORS.cyan}
+                emissive={COLORS.cyan}
+                emissiveIntensity={4}
+                toneMapped={false}
+              />
+            </mesh>
+          ))}
+          <mesh ref={leftEar} position={[0.02, 0.22, 0.11]} rotation={[0, 0, -0.1]}>
+            <coneGeometry args={[0.07, 0.18, 4]} />
+            <meshStandardMaterial color={furC} roughness={0.9} />
+          </mesh>
+          <mesh ref={rightEar} position={[0.02, 0.22, -0.11]} rotation={[0, 0, -0.1]}>
+            <coneGeometry args={[0.07, 0.18, 4]} />
+            <meshStandardMaterial color={furC} roughness={0.9} />
+          </mesh>
+          <mesh position={[0.035, 0.22, 0.11]} rotation={[0, 0, -0.1]}>
+            <coneGeometry args={[0.04, 0.14, 4]} />
+            <meshStandardMaterial color={furB} roughness={0.9} />
+          </mesh>
+          <mesh position={[0.035, 0.22, -0.11]} rotation={[0, 0, -0.1]}>
+            <coneGeometry args={[0.04, 0.14, 4]} />
+            <meshStandardMaterial color={furB} roughness={0.9} />
+          </mesh>
+        </group>
+
+        {/* Legs */}
+        {[
+          [0.28, -0.3, 0.12],
+          [0.28, -0.3, -0.12],
+          [-0.28, -0.3, 0.12],
+          [-0.28, -0.3, -0.12],
+        ].map((pos, i) => (
+          <group key={i} position={pos}>
+            <mesh castShadow>
+              <cylinderGeometry args={[0.065, 0.075, 0.35, 10]} />
+              <meshStandardMaterial color={furA} roughness={0.85} />
+            </mesh>
+            <mesh position={[0, -0.2, 0]} castShadow>
+              <sphereGeometry args={[0.08, 12, 12]} />
+              <meshStandardMaterial color={furC} roughness={0.9} />
+            </mesh>
+          </group>
+        ))}
+
+        {/* Tail */}
+        <group ref={tail} position={[-0.42, 0.12, 0]}>
+          <mesh rotation={[0, 0, 1.2]} castShadow>
+            <torusGeometry args={[0.14, 0.06, 8, 18, Math.PI]} />
+            <meshStandardMaterial color={furA} roughness={0.85} />
+          </mesh>
+          <mesh position={[-0.05, 0.28, 0]}>
+            <sphereGeometry args={[0.07, 12, 12]} />
+            <meshStandardMaterial color={furB} roughness={0.85} />
+          </mesh>
+        </group>
+
+        {/* Collar */}
+        <mesh position={[0.38, 0.12, 0]} rotation={[0, 0, 0.2]}>
+          <torusGeometry args={[0.16, 0.02, 10, 24]} />
+          <meshStandardMaterial color={COLORS.darkMetal} metalness={0.9} roughness={0.3} />
+        </mesh>
+        <mesh position={[0.42, 0.02, 0]}>
+          <sphereGeometry args={[0.032, 12, 12]} />
+          <meshStandardMaterial
+            color={COLORS.cyan}
+            emissive={COLORS.cyan}
+            emissiveIntensity={2.2}
+            toneMapped={false}
+          />
+        </mesh>
+      </group>
+    </group>
+  )
+}

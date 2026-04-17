@@ -1,480 +1,803 @@
 import { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { Edges, RoundedBox } from '@react-three/drei'
 import * as THREE from 'three'
 
+import {
+  // dimensions & constants
+  L,
+  W,
+  H,
+  T,
+  ROOF_PITCH,
+  ROOF_BASE_Y,
+  SLOPE_LEN,
+  SLOPE_ANGLE,
+  FLOOR_Y,
+  FLOOR_THICKNESS,
+  CHASSIS_Y,
+  CHASSIS_BEAM_THICKNESS,
+  SUBFLOOR_Y,
+  SUBFLOOR_HEIGHT,
+  GROUND_Y,
+  COLORS,
+  // textures
+  makeWoodTexture,
+  makeMetalSeamTexture,
+  makeGrassTexture,
+  makeSolarCellTexture,
+  // exterior parts
+  DetailedWheel,
+  Fender,
+  Window,
+  DoorLeaf,
+  Porch,
+  Awning,
+  DetailedSolarPanel,
+  VentPipe,
+  Skylight,
+  Antenna,
+  Gutter,
+  WallLamp,
+  StringLight,
+  GableTriangle,
+  CutoutWall,
+  // interior modules
+  KitchenModule,
+  LoftBedModule,
+  BathroomModule,
+  SofaModule,
+  DiningModule,
+  BatteryModule,
+  WaterTank,
+  LoftLadder,
+  PropaneTank,
+  // environment
+  PineTree,
+  Rock,
+  PathStone,
+  Birds,
+  Dog,
+} from './tinyHouseParts'
+
 /* ============================================================
-   KENOLU — procedural tiny house model.
-   `progress` (0→1) drives the exploded-view reveal:
-     0.0  → closed, idle rotation
-     0.3  → roof lifts & tilts back, solar panels deploy
-     0.6  → front & side walls split open, interior glow turns on
-     0.85 → interior modules (bed, kitchen, bath) rise
-     1.0  → full exploded diagram
+   KENOLU TINY HOUSE — main composition.
+   Scroll progress (0 → 1) drives an exploded view:
+     0.00 closed idle
+     0.25 roof lifts, skylights rise, solar array deploys
+     0.50 walls split + insulation peeks
+     0.75 interior furniture rises; door swings open
+     1.00 full exploded technical diagram
    ============================================================ */
 
 const EASE = (t) => (t < 0 ? 0 : t > 1 ? 1 : t * t * (3 - 2 * t))
 const clamp01 = (t) => (t < 0 ? 0 : t > 1 ? 1 : t)
 
-function Wheel({ position }) {
-  return (
-    <group position={position}>
-      <mesh rotation={[Math.PI / 2, 0, 0]} castShadow>
-        <cylinderGeometry args={[0.55, 0.55, 0.35, 40]} />
-        <meshStandardMaterial color="#0b0b10" roughness={0.85} metalness={0.3} />
-      </mesh>
-      <mesh rotation={[Math.PI / 2, 0, 0]}>
-        <cylinderGeometry args={[0.32, 0.32, 0.4, 20]} />
-        <meshStandardMaterial color="#c8cdd4" roughness={0.25} metalness={1} />
-      </mesh>
-      <mesh rotation={[Math.PI / 2, 0, 0]}>
-        <torusGeometry args={[0.28, 0.025, 10, 32]} />
-        <meshStandardMaterial
-          color="#00e5ff"
-          emissive="#00e5ff"
-          emissiveIntensity={2.4}
-          toneMapped={false}
-        />
-      </mesh>
-      {/* Spokes */}
-      {[0, 1, 2, 3, 4].map((i) => (
-        <mesh key={i} rotation={[Math.PI / 2, 0, (i / 5) * Math.PI]}>
-          <boxGeometry args={[0.04, 0.03, 0.55]} />
-          <meshStandardMaterial color="#6a5cff" emissive="#6a5cff" emissiveIntensity={0.5} toneMapped={false} />
-        </mesh>
-      ))}
-    </group>
-  )
-}
-
-function SolarPanel() {
-  return (
-    <group>
-      <mesh castShadow>
-        <boxGeometry args={[3.4, 0.06, 1.8]} />
-        <meshStandardMaterial
-          color="#0a1428"
-          roughness={0.2}
-          metalness={0.95}
-          emissive="#1a2a4a"
-          emissiveIntensity={0.25}
-        />
-      </mesh>
-      {Array.from({ length: 4 }).map((_, i) =>
-        Array.from({ length: 2 }).map((_, j) => (
-          <mesh
-            key={`${i}-${j}`}
-            position={[-1.275 + i * 0.85, 0.035, -0.45 + j * 0.9]}
-          >
-            <planeGeometry args={[0.78, 0.82]} />
-            <meshStandardMaterial
-              color="#0d1a33"
-              emissive="#2a4a80"
-              emissiveIntensity={0.4}
-              roughness={0.12}
-              metalness={1}
-            />
-          </mesh>
-        ))
-      )}
-      <Edges threshold={15} color="#00e5ff" scale={1.001} />
-    </group>
-  )
-}
-
-function InteriorModule({ position, size, emissive }) {
-  return (
-    <group position={position}>
-      <RoundedBox args={size} radius={0.04} smoothness={4} castShadow>
-        <meshStandardMaterial
-          color="#1a1a28"
-          roughness={0.35}
-          metalness={0.55}
-        />
-      </RoundedBox>
-      <mesh position={[0, size[1] / 2 + 0.02, 0]}>
-        <boxGeometry args={[size[0] * 0.6, 0.015, size[2] * 0.6]} />
-        <meshStandardMaterial
-          color={emissive}
-          emissive={emissive}
-          emissiveIntensity={1.8}
-          toneMapped={false}
-        />
-      </mesh>
-    </group>
-  )
-}
-
-/** Low-poly dog silhouette that sits next to the house. */
-function Dog({ progressRef }) {
-  const body = useRef()
-  const head = useRef()
-  const tail = useRef()
-
-  useFrame((state) => {
-    if (!body.current) return
-    const t = state.clock.elapsedTime
-    body.current.position.y = -2.3 + Math.sin(t * 2) * 0.02
-    if (head.current) head.current.rotation.y = Math.sin(t * 0.8) * 0.15
-    if (tail.current) tail.current.rotation.z = Math.sin(t * 6) * 0.35 - 0.3
-  })
-
-  return (
-    <group ref={body} position={[5.2, -2.3, 1.2]} rotation={[0, -0.4, 0]}>
-      {/* Body */}
-      <mesh castShadow>
-        <boxGeometry args={[0.7, 0.35, 0.3]} />
-        <meshStandardMaterial color="#12141c" roughness={0.6} metalness={0.2} />
-      </mesh>
-      {/* Head */}
-      <group ref={head} position={[0.38, 0.15, 0]}>
-        <mesh castShadow>
-          <boxGeometry args={[0.3, 0.3, 0.28]} />
-          <meshStandardMaterial color="#12141c" roughness={0.6} metalness={0.2} />
-        </mesh>
-        {/* Ears */}
-        <mesh position={[0.05, 0.2, -0.1]}>
-          <coneGeometry args={[0.07, 0.14, 4]} />
-          <meshStandardMaterial color="#0a0b10" />
-        </mesh>
-        <mesh position={[0.05, 0.2, 0.1]}>
-          <coneGeometry args={[0.07, 0.14, 4]} />
-          <meshStandardMaterial color="#0a0b10" />
-        </mesh>
-        {/* Eye glow */}
-        <mesh position={[0.15, 0.04, 0.08]}>
-          <sphereGeometry args={[0.02, 8, 8]} />
-          <meshStandardMaterial color="#00e5ff" emissive="#00e5ff" emissiveIntensity={3} toneMapped={false} />
-        </mesh>
-        <mesh position={[0.15, 0.04, -0.08]}>
-          <sphereGeometry args={[0.02, 8, 8]} />
-          <meshStandardMaterial color="#00e5ff" emissive="#00e5ff" emissiveIntensity={3} toneMapped={false} />
-        </mesh>
-      </group>
-      {/* Legs */}
-      {[
-        [0.22, -0.22, 0.1],
-        [0.22, -0.22, -0.1],
-        [-0.22, -0.22, 0.1],
-        [-0.22, -0.22, -0.1],
-      ].map((pos, i) => (
-        <mesh key={i} position={pos} castShadow>
-          <boxGeometry args={[0.08, 0.25, 0.08]} />
-          <meshStandardMaterial color="#0a0b10" />
-        </mesh>
-      ))}
-      {/* Tail */}
-      <mesh ref={tail} position={[-0.34, 0.08, 0]} rotation={[0, 0, -0.3]}>
-        <boxGeometry args={[0.25, 0.06, 0.06]} />
-        <meshStandardMaterial color="#12141c" />
-      </mesh>
-      {/* LED collar */}
-      <mesh position={[0.22, 0.08, 0]}>
-        <torusGeometry args={[0.12, 0.015, 8, 20]} />
-        <meshStandardMaterial color="#6a5cff" emissive="#6a5cff" emissiveIntensity={2} toneMapped={false} />
-      </mesh>
-    </group>
-  )
-}
-
-/** Glowing cone of light (volumetric feel) above the house when open. */
-function VolumetricLight({ position, intensity = 1 }) {
-  return (
-    <mesh position={position} rotation={[0, 0, 0]}>
-      <coneGeometry args={[0.9, 3.2, 32, 1, true]} />
-      <meshBasicMaterial
-        color="#00e5ff"
-        transparent
-        opacity={0.05 * intensity}
-        side={THREE.DoubleSide}
-        depthWrite={false}
-        toneMapped={false}
-      />
-    </mesh>
-  )
-}
-
-export default function TinyHouse3D({ progressRef }) {
+export default function TinyHouse3D({ progressRef, disableAutoRotate = false }) {
+  // ---------------- Refs driven by useFrame ----------------
   const root = useRef()
   const roofRef = useRef()
+  const skylightsRef = useRef()
   const panelLeft = useRef()
   const panelRight = useRef()
   const wallFront = useRef()
   const wallBack = useRef()
   const wallLeft = useRef()
   const wallRight = useRef()
-  const interior = useRef()
-  const interiorLight = useRef()
-  const doorLight = useRef()
-  const underglow = useRef()
+  const insulFront = useRef()
+  const insulBack = useRef()
+  const doorRef = useRef()
+  const porchRef = useRef()
+  const awningRef = useRef()
+  const interiorRef = useRef()
+  const interiorLightRef = useRef()
+  const doorLightRef = useRef()
+  const underglowRef = useRef()
+  const batteryRef = useRef()
+  const waterTankRef = useRef()
+  const stringLightsRef = useRef()
 
-  // Geometry constants (metres, scale preserved)
-  const L = 7.2  // length
-  const W = 2.5  // width
-  const H = 2.5  // height (walls)
-  const T = 0.12 // wall thickness
+  // ---------------- Procedural textures (cached) ----------------
+  const woodLong = useMemo(() => makeWoodTexture([6, 1]), [])
+  const woodShort = useMemo(() => makeWoodTexture([2, 1]), [])
+  const woodGable = useMemo(() => makeWoodTexture([2.5, 1.2]), [])
+  const deckWood = useMemo(() => makeWoodTexture([3, 2]), [])
+  const metalRoof = useMemo(() => makeMetalSeamTexture([8, 1]), [])
+  const grass = useMemo(() => makeGrassTexture(), [])
+  const solarCells = useMemo(() => makeSolarCellTexture(), [])
 
-  const interiorModules = useMemo(
+  // ---------------- Interior module anchors ----------------
+  // Each module's base sits on the floor top (FLOOR_Y + FLOOR_THICKNESS/2).
+  const floorTop = FLOOR_Y + FLOOR_THICKNESS / 2
+  const interiorAnchors = useMemo(
     () => [
-      // Kitchen block
-      { pos: [-L / 2 + 1.0, -H / 2 + 0.5, -W / 2 + 0.5], size: [1.6, 1.0, 0.7], emissive: '#00e5ff' },
-      // Bed platform
-      { pos: [L / 2 - 1.2, -H / 2 + 0.3, 0], size: [1.9, 0.4, 1.8], emissive: '#6a5cff' },
-      // Bathroom cube
-      { pos: [0, -H / 2 + 1.0, W / 2 - 0.6], size: [1.2, 1.8, 0.9], emissive: '#00e5ff' },
-      // Sofa / desk
-      { pos: [-0.2, -H / 2 + 0.35, -W / 2 + 0.4], size: [1.8, 0.5, 0.6], emissive: '#6a5cff' },
+      // kitchen — back-left corner, counter height
+      { id: 'kitchen', pos: [-L / 2 + 1.1, floorTop + 0.45, -W / 2 + 0.4] },
+      // loft bed — right end, raised as a mezzanine
+      { id: 'loft', pos: [L / 2 - 1.2, floorTop + 1.45, 0] },
+      // bathroom cube — middle, against back wall
+      { id: 'bath', pos: [0.2, floorTop + 0.9, W / 2 - 0.55] },
+      // sofa — front, lower
+      { id: 'sofa', pos: [-0.4, floorTop + 0.3, -W / 2 + 0.55] },
+      // dining — between bath and loft, low
+      { id: 'dining', pos: [1.6, floorTop + 0.4, W / 2 - 0.8] },
     ],
-    []
+    [floorTop]
   )
 
+  // ---------------- Animation ----------------
   useFrame((state) => {
     const p = progressRef?.current ?? 0
-    const tp0 = EASE(clamp01(p / 0.35))
-    const tp1 = EASE(clamp01((p - 0.25) / 0.35))
-    const tp2 = EASE(clamp01((p - 0.55) / 0.35))
-    const tp3 = EASE(clamp01((p - 0.7) / 0.3))
+    const tpRoof = EASE(clamp01(p / 0.35))
+    const tpWalls = EASE(clamp01((p - 0.25) / 0.35))
+    const tpInterior = EASE(clamp01((p - 0.55) / 0.35))
+    const tpExtras = EASE(clamp01((p - 0.7) / 0.3))
     const t = state.clock.elapsedTime
 
-    if (root.current) {
-      root.current.rotation.y = t * 0.12 + p * 1.0
-      root.current.rotation.x = -0.06 + Math.sin(t * 0.4) * 0.015
-      root.current.position.y = -0.2 + Math.sin(t * 0.5) * 0.02
+    // Root drift / auto-rotation.
+    if (root.current && !disableAutoRotate) {
+      root.current.rotation.y = -Math.PI / 6 + Math.sin(t * 0.25) * 0.12 + p * 0.6
+      root.current.rotation.x = -0.05 + Math.sin(t * 0.4) * 0.01
+      root.current.position.y = Math.sin(t * 0.5) * 0.02
     }
 
     if (roofRef.current) {
-      roofRef.current.position.y = H / 2 + 0.1 + tp0 * 2.6
-      roofRef.current.rotation.x = tp0 * -0.38
+      roofRef.current.position.y = ROOF_BASE_Y + tpRoof * 2.8
+      roofRef.current.rotation.x = tpRoof * -0.32
+    }
+    if (skylightsRef.current) {
+      skylightsRef.current.position.y = ROOF_BASE_Y + tpRoof * 2.3
     }
 
+    // Solar panels — aligned with each slope, lift on explode.
     if (panelLeft.current) {
-      panelLeft.current.rotation.z = 0.25 - tp3 * 0.6
-      panelLeft.current.position.y = H / 2 + 0.45 + tp0 * 2.5
-      panelLeft.current.position.x = -0.9 - tp3 * 0.45
+      panelLeft.current.rotation.x = -SLOPE_ANGLE + tpExtras * 0.25
+      panelLeft.current.position.y = ROOF_BASE_Y + ROOF_PITCH / 2 + 0.08 + tpRoof * 2.6
+      panelLeft.current.position.z = -W / 4 - tpExtras * 0.55
     }
     if (panelRight.current) {
-      panelRight.current.rotation.z = -0.25 + tp3 * 0.6
-      panelRight.current.position.y = H / 2 + 0.45 + tp0 * 2.5
-      panelRight.current.position.x = 0.9 + tp3 * 0.45
+      panelRight.current.rotation.x = SLOPE_ANGLE - tpExtras * 0.25
+      panelRight.current.position.y = ROOF_BASE_Y + ROOF_PITCH / 2 + 0.08 + tpRoof * 2.6
+      panelRight.current.position.z = W / 4 + tpExtras * 0.55
     }
 
+    // Walls slide outward.
     if (wallFront.current) {
-      wallFront.current.position.z = -W / 2 - tp1 * 1.5
-      wallFront.current.rotation.y = tp1 * -0.14
+      wallFront.current.position.z = -W / 2 - tpWalls * 1.6
+      wallFront.current.rotation.y = tpWalls * -0.14
     }
     if (wallBack.current) {
-      wallBack.current.position.z = W / 2 + tp1 * 1.5
-      wallBack.current.rotation.y = tp1 * 0.14
+      wallBack.current.position.z = W / 2 + tpWalls * 1.6
+      wallBack.current.rotation.y = tpWalls * 0.14
     }
-    if (wallLeft.current) wallLeft.current.position.x = -L / 2 - tp1 * 1.8
-    if (wallRight.current) wallRight.current.position.x = L / 2 + tp1 * 1.8
+    if (wallLeft.current) wallLeft.current.position.x = -L / 2 - tpWalls * 1.9
+    if (wallRight.current) wallRight.current.position.x = L / 2 + tpWalls * 1.9
 
-    if (interior.current) {
-      interior.current.children.forEach((child, i) => {
-        const base = interiorModules[i]
+    if (insulFront.current) insulFront.current.position.z = -W / 2 - tpWalls * 1.0
+    if (insulBack.current) insulBack.current.position.z = W / 2 + tpWalls * 1.0
+
+    if (doorRef.current) doorRef.current.rotation.y = tpWalls * 1.2
+    if (porchRef.current) porchRef.current.position.z = -W / 2 - 0.65 - tpWalls * 0.2
+    if (awningRef.current) awningRef.current.position.y = H / 2 + 0.4 + tpRoof * 1.2
+
+    if (interiorRef.current) {
+      interiorRef.current.children.forEach((child, i) => {
+        const base = interiorAnchors[i]
         if (!base) return
-        child.position.y = base.pos[1] + tp2 * (0.3 + i * 0.18)
-        child.rotation.y = tp2 * 0.1 * (i % 2 === 0 ? 1 : -1)
+        child.position.y = base.pos[1] + tpInterior * (0.3 + i * 0.22)
+        child.rotation.y = tpInterior * 0.1 * (i % 2 === 0 ? 1 : -1)
       })
     }
 
-    // Interior light that pulses on when walls open
-    if (interiorLight.current) {
-      interiorLight.current.intensity = tp1 * (2.8 + Math.sin(t * 3) * 0.4)
+    // Battery + water tank are children of the chassis group — y is LOCAL to it.
+    // At rest they're tucked against the chassis underside; explode drops them out.
+    if (batteryRef.current) {
+      batteryRef.current.position.y = -0.3 - tpExtras * 1.0
+      batteryRef.current.position.x = -1.5 - tpExtras * 0.9
     }
-    if (doorLight.current) {
-      doorLight.current.material.emissiveIntensity = 1.6 + Math.sin(t * 2.2) * 0.4
+    if (waterTankRef.current) {
+      waterTankRef.current.position.y = -0.3 - tpExtras * 0.8
+      waterTankRef.current.position.x = 1.5 + tpExtras * 0.9
     }
-    if (underglow.current) {
-      underglow.current.material.opacity = 0.25 + Math.sin(t * 1.2) * 0.1
+
+    if (interiorLightRef.current) {
+      interiorLightRef.current.intensity = tpWalls * (3.2 + Math.sin(t * 3) * 0.4)
+    }
+    if (doorLightRef.current?.material) {
+      doorLightRef.current.material.emissiveIntensity = 1.6 + Math.sin(t * 2.2) * 0.4
+    }
+    if (underglowRef.current?.material) {
+      underglowRef.current.material.opacity = 0.28 + Math.sin(t * 1.2) * 0.1
+    }
+    if (stringLightsRef.current) {
+      stringLightsRef.current.children.forEach((c, i) => {
+        if (c.children?.[0]?.material) {
+          c.children[0].material.emissiveIntensity =
+            2 + Math.sin(t * 2 + i * 0.3) * 0.6
+        }
+      })
     }
   })
 
+  // ======================================================
+  // JSX composition
+  // ======================================================
   return (
-    <group ref={root} position={[0, -0.2, 0]}>
-      {/* ==================== TRAILER / CHASSIS ==================== */}
-      <group position={[0, -H / 2 - 0.4, 0]}>
+    <group ref={root}>
+      {/* ==================== INTERIOR POINT LIGHT ==================== */}
+      <pointLight
+        ref={interiorLightRef}
+        position={[0, 0, 0]}
+        intensity={0}
+        color={COLORS.warm}
+        distance={9}
+        decay={1.6}
+      />
+
+      {/* ==================== CHASSIS & UTILITIES ==================== */}
+      <group position={[0, CHASSIS_Y, 0]}>
+        {/* Main I-beam frame */}
         <mesh castShadow>
-          <boxGeometry args={[L + 0.2, 0.18, W - 0.4]} />
-          <meshStandardMaterial color="#1a1d24" roughness={0.6} metalness={0.8} />
+          <boxGeometry args={[L + 0.2, CHASSIS_BEAM_THICKNESS, W - 0.3]} />
+          <meshStandardMaterial color={COLORS.steel} roughness={0.6} metalness={0.9} />
         </mesh>
-        <Wheel position={[-L / 2 + 1.2, -0.3, -W / 2 + 0.4]} />
-        <Wheel position={[-L / 2 + 1.2, -0.3, W / 2 - 0.4]} />
-        <Wheel position={[L / 2 - 1.2, -0.3, -W / 2 + 0.4]} />
-        <Wheel position={[L / 2 - 1.2, -0.3, W / 2 - 0.4]} />
+        {/* Longitudinal rails underneath */}
+        {[-W / 2 + 0.2, W / 2 - 0.2].map((z, i) => (
+          <mesh key={i} position={[0, -0.12, z]} castShadow>
+            <boxGeometry args={[L + 0.1, 0.1, 0.08]} />
+            <meshStandardMaterial color={COLORS.deepDark} metalness={1} roughness={0.45} />
+          </mesh>
+        ))}
+        {/* Cross-members */}
+        {Array.from({ length: 5 }).map((_, i) => (
+          <mesh key={i} position={[-L / 2 + 1 + i * 1.3, -0.13, 0]} castShadow>
+            <boxGeometry args={[0.08, 0.08, W - 0.35]} />
+            <meshStandardMaterial color={COLORS.deepDark} metalness={1} roughness={0.45} />
+          </mesh>
+        ))}
+
+        {/* Wheels (absolute Y within chassis = -0.3 → sitting on GROUND_Y) */}
+        {[
+          [-L / 2 + 1.4, -W / 2 + 0.4],
+          [-L / 2 + 1.4, W / 2 - 0.4],
+          [L / 2 - 1.4, -W / 2 + 0.4],
+          [L / 2 - 1.4, W / 2 - 0.4],
+        ].map((xy, i) => (
+          <DetailedWheel key={i} position={[xy[0], -0.3, xy[1]]} />
+        ))}
+        {/* Fenders arch over wheels */}
+        {[
+          [-L / 2 + 1.4, -W / 2 + 0.4],
+          [-L / 2 + 1.4, W / 2 - 0.4],
+          [L / 2 - 1.4, -W / 2 + 0.4],
+          [L / 2 - 1.4, W / 2 - 0.4],
+        ].map((xy, i) => (
+          <Fender key={i} position={[xy[0], -0.3, xy[1]]} />
+        ))}
+
+        {/* Corner jacks */}
+        {[
+          [-L / 2 + 0.2, -W / 2 + 0.4],
+          [-L / 2 + 0.2, W / 2 - 0.4],
+          [L / 2 - 0.2, -W / 2 + 0.4],
+          [L / 2 - 0.2, W / 2 - 0.4],
+        ].map((xy, i) => (
+          <group key={i} position={[xy[0], -0.25, xy[1]]}>
+            <mesh>
+              <boxGeometry args={[0.1, 0.4, 0.1]} />
+              <meshStandardMaterial color="#2a2d35" metalness={1} roughness={0.4} />
+            </mesh>
+            <mesh position={[0, -0.22, 0]}>
+              <boxGeometry args={[0.22, 0.05, 0.22]} />
+              <meshStandardMaterial color={COLORS.steel} metalness={0.8} roughness={0.5} />
+            </mesh>
+          </group>
+        ))}
+
         {/* Hitch */}
-        <mesh position={[-L / 2 - 0.9, 0, 0]}>
-          <boxGeometry args={[1.8, 0.1, 0.1]} />
-          <meshStandardMaterial color="#2a2d35" metalness={1} roughness={0.3} />
+        <group position={[-L / 2 - 0.9, 0, 0]}>
+          <mesh>
+            <boxGeometry args={[1.8, 0.1, 0.1]} />
+            <meshStandardMaterial color="#2a2d35" metalness={1} roughness={0.3} />
+          </mesh>
+          <mesh position={[-0.9, -0.05, 0]}>
+            <sphereGeometry args={[0.08, 16, 16]} />
+            <meshStandardMaterial color={COLORS.steel} metalness={1} roughness={0.35} />
+          </mesh>
+          <mesh position={[-0.3, -0.1, 0.2]} rotation={[0, 0.3, -0.2]}>
+            <boxGeometry args={[1.2, 0.05, 0.05]} />
+            <meshStandardMaterial color="#2a2d35" metalness={1} />
+          </mesh>
+          <mesh position={[-0.3, -0.1, -0.2]} rotation={[0, -0.3, -0.2]}>
+            <boxGeometry args={[1.2, 0.05, 0.05]} />
+            <meshStandardMaterial color="#2a2d35" metalness={1} />
+          </mesh>
+        </group>
+
+        {/* Battery pack — mounted on the underside of the chassis.
+            Drops and slides out on explode. */}
+        <group ref={batteryRef} position={[-1.5, -0.3, 0]}>
+          <BatteryModule />
+        </group>
+
+        {/* Water tank — bolted to the chassis, opposite side. */}
+        <group ref={waterTankRef} position={[1.5, -0.3, 0]}>
+          <WaterTank />
+        </group>
+
+        {/* Propane tank at the hitch side */}
+        <group position={[-L / 2 - 0.1, 0, W / 2 - 0.3]}>
+          <PropaneTank />
+        </group>
+      </group>
+
+      {/* ==================== SUB-FLOOR BAND ==================== */}
+      {/* closes the gap between the chassis top and the floor bottom. */}
+      <mesh position={[0, SUBFLOOR_Y, 0]} castShadow receiveShadow>
+        <boxGeometry args={[L, SUBFLOOR_HEIGHT, W]} />
+        <meshStandardMaterial color="#1a1d26" metalness={0.6} roughness={0.7} />
+      </mesh>
+      {/* Insulation strip peeking out of subfloor edges */}
+      {[-W / 2 + 0.02, W / 2 - 0.02].map((z, i) => (
+        <mesh
+          key={i}
+          position={[0, SUBFLOOR_Y, z]}
+        >
+          <boxGeometry args={[L - 0.1, SUBFLOOR_HEIGHT - 0.04, 0.015]} />
+          <meshStandardMaterial color={COLORS.insulation} roughness={0.95} />
+        </mesh>
+      ))}
+
+      {/* ==================== FLOOR DECK ==================== */}
+      <mesh position={[0, FLOOR_Y, 0]} receiveShadow>
+        <boxGeometry args={[L, FLOOR_THICKNESS, W]} />
+        <meshStandardMaterial color="#0c0c14" roughness={0.5} metalness={0.4} />
+      </mesh>
+      {/* Interior wood floor (visible when walls open) */}
+      <mesh position={[0, FLOOR_Y + FLOOR_THICKNESS / 2 + 0.001, 0]} receiveShadow>
+        <boxGeometry args={[L - 0.05, 0.01, W - 0.05]} />
+        <meshStandardMaterial map={deckWood} color="#ffffff" roughness={0.85} />
+      </mesh>
+
+      {/* ==================== WALLS + INSULATION ====================
+          Insulation is a thin CutoutWall with the same openings as the
+          corresponding structural wall, so windows and door go all the
+          way through from outside to inside. */}
+      <group ref={insulFront} position={[0, 0, -W / 2 + T * 0.45]}>
+        <CutoutWall
+          width={L - 0.3}
+          height={H}
+          thickness={0.04}
+          color={COLORS.insulation}
+          roughness={0.95}
+          holes={[
+            { shape: 'rect', cx: -1.7, cy: 0.3, w: 2.4, h: 1.3 },
+            { shape: 'rect', cx: 1.0, cy: 0.5, w: 1.0, h: 0.8 },
+            { shape: 'rect', cx: 2.4, cy: -0.18, w: 0.95, h: 2.05 },
+          ]}
+        />
+      </group>
+      <group ref={insulBack} position={[0, 0, W / 2 - T * 0.45]}>
+        <CutoutWall
+          width={L - 0.3}
+          height={H}
+          thickness={0.04}
+          color={COLORS.insulation}
+          roughness={0.95}
+          holes={[
+            { shape: 'rect', cx: -2.2, cy: 0.3, w: 0.9, h: 1.2 },
+            { shape: 'rect', cx: 0, cy: 0.3, w: 0.9, h: 1.2 },
+            { shape: 'rect', cx: 2.2, cy: 0.3, w: 0.9, h: 1.2 },
+          ]}
+        />
+      </group>
+
+      {/* FRONT WALL — real cut-outs for 2 windows + door,
+          single Window pane at the centre of each opening. */}
+      <group ref={wallFront} position={[0, 0, -W / 2]}>
+        <CutoutWall
+          width={L}
+          height={H}
+          thickness={T}
+          map={woodLong}
+          holes={[
+            { shape: 'rect', cx: -1.7, cy: 0.3, w: 2.4, h: 1.3 }, // picture window
+            { shape: 'rect', cx: 1.0, cy: 0.5, w: 1.0, h: 0.8 },  // kitchen window
+            { shape: 'rect', cx: 2.4, cy: -0.18, w: 0.95, h: 2.05 }, // door (with a 0.03 threshold)
+          ]}
+        />
+        {/* Window glazing & frames, centred in each hole */}
+        <group position={[-1.7, 0.3, 0]}>
+          <Window width={2.4} height={1.3} />
+        </group>
+        <group position={[1.0, 0.5, 0]}>
+          <Window width={1.0} height={0.8} mullion={false} />
+        </group>
+        {/* Door jamb trim (on exterior side only) */}
+        <mesh position={[2.4, -0.2, -T / 2 - 0.003]}>
+          <boxGeometry args={[1.02, 2.16, 0.02]} />
+          <meshStandardMaterial color={COLORS.darkWood} roughness={0.6} />
+        </mesh>
+        {/* Pivoting door leaf — sits inside the opening, swings outward */}
+        <group ref={doorRef} position={[1.97, -0.2, 0]}>
+          <group position={[0.45, 0, 0]}>
+            <DoorLeaf />
+          </group>
+        </group>
+        {/* Wall lamp beside the door */}
+        <WallLamp position={[3.15, 0.3, -T / 2 - 0.04]} />
+        {/* Neon baseboard accent (exterior face) */}
+        <mesh ref={doorLightRef} position={[0, -H / 2 + 0.05, -T / 2 - 0.005]}>
+          <boxGeometry args={[L - 0.2, 0.03, 0.015]} />
+          <meshStandardMaterial
+            color={COLORS.cyan}
+            emissive={COLORS.cyan}
+            emissiveIntensity={1.8}
+            toneMapped={false}
+          />
         </mesh>
       </group>
 
-      {/* ==================== FLOOR ==================== */}
-      <mesh position={[0, -H / 2, 0]} receiveShadow>
-        <boxGeometry args={[L, 0.12, W]} />
-        <meshStandardMaterial color="#0c0c14" roughness={0.5} metalness={0.4} />
-      </mesh>
+      {/* BACK WALL — 3 cut-out windows. */}
+      <group ref={wallBack} position={[0, 0, W / 2]}>
+        <CutoutWall
+          width={L}
+          height={H}
+          thickness={T}
+          map={woodLong}
+          holes={[
+            { shape: 'rect', cx: -2.2, cy: 0.3, w: 0.9, h: 1.2 },
+            { shape: 'rect', cx: 0, cy: 0.3, w: 0.9, h: 1.2 },
+            { shape: 'rect', cx: 2.2, cy: 0.3, w: 0.9, h: 1.2 },
+          ]}
+        />
+        {[-2.2, 0, 2.2].map((x, i) => (
+          <group key={i} position={[x, 0.3, 0]}>
+            <Window width={0.9} height={1.2} mullion={i === 1} />
+          </group>
+        ))}
+        {/* Violet baseboard on exterior */}
+        <mesh position={[0, -H / 2 + 0.05, T / 2 + 0.005]}>
+          <boxGeometry args={[L - 0.2, 0.03, 0.015]} />
+          <meshStandardMaterial
+            color={COLORS.violet}
+            emissive={COLORS.violet}
+            emissiveIntensity={1.6}
+            toneMapped={false}
+          />
+        </mesh>
+      </group>
 
-      {/* ==================== INTERIOR POINT LIGHT ==================== */}
-      <pointLight
-        ref={interiorLight}
-        position={[0, 0, 0]}
-        intensity={0}
-        color="#ffd28a"
-        distance={8}
-        decay={1.5}
-      />
-
-      {/* ==================== WALLS ==================== */}
-      <group ref={wallFront}>
-        <Wall args={[L, H, T]} position={[0, 0, 0]}>
-          <mesh position={[-1.5, 0.3, T / 2 + 0.005]}>
-            <planeGeometry args={[2.8, 1.4]} />
+      {/* LEFT END WALL + porthole cut-out + gable.
+          Rotated 90° around Y so the CutoutWall's thickness aligns with X. */}
+      <group ref={wallLeft} position={[-L / 2, 0, 0]}>
+        <group rotation={[0, Math.PI / 2, 0]}>
+          <CutoutWall
+            width={W}
+            height={H}
+            thickness={T}
+            map={woodShort}
+            holes={[{ shape: 'circle', cx: 0, cy: 0.3, r: 0.3 }]}
+          />
+        </group>
+        {/* Porthole glass + ring trim, centred in the circular hole */}
+        <group position={[0, 0.3, 0]} rotation={[0, -Math.PI / 2, 0]}>
+          <mesh>
+            <ringGeometry args={[0.3, 0.38, 32]} />
+            <meshStandardMaterial
+              color="#1a1f2a"
+              metalness={0.9}
+              roughness={0.3}
+              side={THREE.DoubleSide}
+            />
+          </mesh>
+          <mesh>
+            <circleGeometry args={[0.3, 32]} />
             <meshPhysicalMaterial
-              color="#0a2a3a"
-              transmission={0.6}
-              roughness={0.08}
-              metalness={0.2}
-              thickness={0.5}
+              color="#0a2033"
+              transmission={0.85}
               transparent
-              opacity={0.55}
-              ior={1.4}
-              clearcoat={1}
+              opacity={0.6}
+              thickness={0.3}
+              roughness={0.05}
+              ior={1.45}
+              emissive={COLORS.warm}
+              emissiveIntensity={0.35}
+              side={THREE.DoubleSide}
             />
           </mesh>
-          <mesh position={[2.2, -0.3, T / 2 + 0.005]}>
-            <planeGeometry args={[0.9, 1.9]} />
-            <meshStandardMaterial color="#05050a" roughness={0.4} metalness={0.7} />
+        </group>
+        {/* Gable */}
+        <group position={[-T / 2 - 0.001, H / 2, 0]} rotation={[0, -Math.PI / 2, 0]}>
+          <GableTriangle
+            material={
+              <meshStandardMaterial
+                map={woodGable}
+                color="#ffffff"
+                roughness={0.85}
+                side={THREE.DoubleSide}
+              />
+            }
+          />
+          <mesh position={[0, ROOF_PITCH * 0.45, 0.01]}>
+            <circleGeometry args={[0.12, 16]} />
+            <meshStandardMaterial color="#05070d" metalness={0.9} roughness={0.5} />
           </mesh>
-          <mesh ref={doorLight} position={[2.55, -0.3, T / 2 + 0.01]}>
-            <boxGeometry args={[0.03, 0.6, 0.02]} />
+          <mesh position={[0, ROOF_PITCH * 0.45, 0.02]}>
+            <ringGeometry args={[0.1, 0.12, 24]} />
             <meshStandardMaterial
-              color="#00e5ff"
-              emissive="#00e5ff"
-              emissiveIntensity={2}
-              toneMapped={false}
-            />
-          </mesh>
-          <mesh position={[0, -H / 2 + 0.05, T / 2 + 0.005]}>
-            <boxGeometry args={[L - 0.2, 0.03, 0.015]} />
-            <meshStandardMaterial
-              color="#00e5ff"
-              emissive="#00e5ff"
+              color={COLORS.cyan}
+              emissive={COLORS.cyan}
               emissiveIntensity={1.8}
               toneMapped={false}
             />
           </mesh>
-        </Wall>
+        </group>
       </group>
 
-      <group ref={wallBack}>
-        <Wall args={[L, H, T]} position={[0, 0, 0]}>
-          {[-2, 0, 2].map((x) => (
-            <mesh key={x} position={[x, 0.3, -T / 2 - 0.005]}>
-              <planeGeometry args={[0.5, 1.3]} />
-              <meshPhysicalMaterial
-                color="#0a2a3a"
-                transmission={0.6}
-                roughness={0.08}
-                transparent
-                opacity={0.55}
-                ior={1.4}
+      {/* RIGHT END WALL + gable. Same 90° rotation as left, no holes. */}
+      <group ref={wallRight} position={[L / 2, 0, 0]}>
+        <group rotation={[0, -Math.PI / 2, 0]}>
+          <CutoutWall width={W} height={H} thickness={T} map={woodShort} />
+        </group>
+        <group position={[T / 2 + 0.001, H / 2, 0]} rotation={[0, Math.PI / 2, 0]}>
+          <GableTriangle
+            material={
+              <meshStandardMaterial
+                map={woodGable}
+                color="#ffffff"
+                roughness={0.85}
+                side={THREE.DoubleSide}
               />
-            </mesh>
-          ))}
-          <mesh position={[0, -H / 2 + 0.05, -T / 2 - 0.005]}>
-            <boxGeometry args={[L - 0.2, 0.03, 0.015]} />
+            }
+          />
+          <mesh position={[0, ROOF_PITCH * 0.45, 0.01]}>
+            <circleGeometry args={[0.12, 16]} />
+            <meshStandardMaterial color="#05070d" metalness={0.9} roughness={0.5} />
+          </mesh>
+          <mesh position={[0, ROOF_PITCH * 0.45, 0.02]}>
+            <ringGeometry args={[0.1, 0.12, 24]} />
             <meshStandardMaterial
-              color="#6a5cff"
-              emissive="#6a5cff"
+              color={COLORS.violet}
+              emissive={COLORS.violet}
               emissiveIntensity={1.6}
               toneMapped={false}
             />
           </mesh>
-        </Wall>
-      </group>
-
-      <group ref={wallLeft}>
-        <Wall args={[T, H, W]} position={[0, 0, 0]}>
-          <mesh position={[-T / 2 - 0.005, 0.2, 0]} rotation={[0, -Math.PI / 2, 0]}>
-            <planeGeometry args={[1.4, 1.2]} />
-            <meshPhysicalMaterial
-              color="#0a2a3a"
-              transmission={0.6}
-              roughness={0.08}
-              transparent
-              opacity={0.55}
-              ior={1.4}
-            />
-          </mesh>
-        </Wall>
-      </group>
-
-      <group ref={wallRight}>
-        <Wall args={[T, H, W]} position={[0, 0, 0]} />
+        </group>
       </group>
 
       {/* ==================== ROOF ==================== */}
-      <group ref={roofRef} position={[0, H / 2 + 0.1, 0]}>
-        <mesh castShadow>
-          <boxGeometry args={[L + 0.1, 0.12, W + 0.1]} />
-          <meshStandardMaterial color="#0a0a12" roughness={0.5} metalness={0.7} />
+      <group ref={roofRef} position={[0, ROOF_BASE_Y, 0]}>
+        {/* Front slope */}
+        <mesh
+          position={[0, ROOF_PITCH / 2, -W / 4]}
+          rotation={[Math.atan2(W / 2, ROOF_PITCH), 0, 0]}
+          castShadow
+          receiveShadow
+        >
+          <planeGeometry args={[L + 0.4, SLOPE_LEN + 0.05]} />
+          <meshStandardMaterial
+            map={metalRoof}
+            color="#ffffff"
+            metalness={0.85}
+            roughness={0.35}
+            side={THREE.DoubleSide}
+          />
         </mesh>
-        <Edges threshold={15} color="#2a2d35" scale={1.001} />
+        {/* Back slope */}
+        <mesh
+          position={[0, ROOF_PITCH / 2, W / 4]}
+          rotation={[-Math.atan2(W / 2, ROOF_PITCH), 0, 0]}
+          castShadow
+          receiveShadow
+        >
+          <planeGeometry args={[L + 0.4, SLOPE_LEN + 0.05]} />
+          <meshStandardMaterial
+            map={metalRoof}
+            color="#ffffff"
+            metalness={0.85}
+            roughness={0.35}
+            side={THREE.DoubleSide}
+          />
+        </mesh>
+        {/* Ridge cap */}
+        <mesh position={[0, ROOF_PITCH + 0.02, 0]} castShadow>
+          <boxGeometry args={[L + 0.5, 0.06, 0.18]} />
+          <meshStandardMaterial color="#05080f" metalness={1} roughness={0.3} />
+        </mesh>
+        {/* Eave trims */}
+        <mesh position={[0, 0, -W / 2 - 0.02]}>
+          <boxGeometry args={[L + 0.4, 0.1, 0.05]} />
+          <meshStandardMaterial color="#0a0a12" metalness={0.8} roughness={0.4} />
+        </mesh>
+        <mesh position={[0, 0, W / 2 + 0.02]}>
+          <boxGeometry args={[L + 0.4, 0.1, 0.05]} />
+          <meshStandardMaterial color="#0a0a12" metalness={0.8} roughness={0.4} />
+        </mesh>
+        {/* Gutters */}
+        <group position={[0, -0.03, -W / 2 - 0.05]}>
+          <Gutter length={L + 0.4} />
+        </group>
+        <group position={[0, -0.03, W / 2 + 0.05]}>
+          <Gutter length={L + 0.4} />
+        </group>
+        {/* Vents */}
+        <group position={[1.5, ROOF_PITCH * 0.6, 0.4]}>
+          <VentPipe />
+        </group>
+        <group position={[-2.2, ROOF_PITCH * 0.6, -0.4]}>
+          <VentPipe />
+        </group>
+        {/* Antenna */}
+        <group position={[-L / 2 + 0.5, ROOF_PITCH + 0.05, -0.3]}>
+          <Antenna />
+        </group>
+        {/* Neon eave accent */}
+        <mesh position={[0, -0.04, -W / 2 - 0.03]}>
+          <boxGeometry args={[L + 0.35, 0.015, 0.008]} />
+          <meshStandardMaterial
+            color={COLORS.cyan}
+            emissive={COLORS.cyan}
+            emissiveIntensity={2.2}
+            toneMapped={false}
+          />
+        </mesh>
+        <mesh position={[0, -0.04, W / 2 + 0.03]}>
+          <boxGeometry args={[L + 0.35, 0.015, 0.008]} />
+          <meshStandardMaterial
+            color={COLORS.violet}
+            emissive={COLORS.violet}
+            emissiveIntensity={2}
+            toneMapped={false}
+          />
+        </mesh>
+      </group>
+
+      {/* ==================== SKYLIGHTS (lift independently) ==================== */}
+      <group ref={skylightsRef} position={[0, ROOF_BASE_Y, 0]}>
+        <group
+          position={[-1.8, ROOF_PITCH / 2, -W / 4]}
+          rotation={[-SLOPE_ANGLE, 0, 0]}
+        >
+          <Skylight w={1.3} l={0.8} />
+        </group>
+        <group
+          position={[2.0, ROOF_PITCH / 2, W / 4]}
+          rotation={[SLOPE_ANGLE, 0, 0]}
+        >
+          <Skylight w={1.0} l={0.7} />
+        </group>
       </group>
 
       {/* ==================== SOLAR PANELS ==================== */}
-      <group ref={panelLeft} position={[-0.9, H / 2 + 0.45, 0]} rotation={[0, 0, 0.25]}>
-        <SolarPanel />
+      <group ref={panelLeft}>
+        <DetailedSolarPanel cellTex={solarCells} />
       </group>
-      <group ref={panelRight} position={[0.9, H / 2 + 0.45, 0]} rotation={[0, 0, -0.25]}>
-        <SolarPanel />
-      </group>
-
-      {/* ==================== INTERIOR MODULES ==================== */}
-      <group ref={interior}>
-        {interiorModules.map((m, i) => (
-          <InteriorModule key={i} position={m.pos} size={m.size} emissive={m.emissive} />
-        ))}
+      <group ref={panelRight}>
+        <DetailedSolarPanel cellTex={solarCells} />
       </group>
 
-      {/* ==================== DOG COMPANION ==================== */}
-      <Dog progressRef={progressRef} />
+      {/* ==================== AWNING + PORCH ==================== */}
+      <group ref={awningRef} position={[2.4, H / 2 + 0.4, -W / 2 - 0.3]}>
+        <Awning />
+      </group>
+      <group ref={porchRef} position={[2.4, FLOOR_Y + 0.05, -W / 2 - 0.65]}>
+        <Porch />
+      </group>
 
-      {/* ==================== UNDERGLOW RING ==================== */}
-      <mesh ref={underglow} position={[0, -H / 2 - 0.55, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+      {/* ==================== STRING LIGHTS over front eaves ==================== */}
+      <group
+        ref={stringLightsRef}
+        position={[0, H / 2 + 0.2, -W / 2 - 0.15]}
+      >
+        <StringLight length={L - 0.4} above={0.1} />
+      </group>
+
+      {/* ==================== INTERIOR FURNITURE ==================== */}
+      <group ref={interiorRef}>
+        <group position={interiorAnchors[0].pos}>
+          <KitchenModule />
+        </group>
+        <group position={interiorAnchors[1].pos}>
+          <LoftBedModule />
+          <group position={[-1.0, -1.1, 0.6]}>
+            <LoftLadder />
+          </group>
+        </group>
+        <group position={interiorAnchors[2].pos}>
+          <BathroomModule />
+        </group>
+        <group position={interiorAnchors[3].pos}>
+          <SofaModule />
+        </group>
+        <group position={interiorAnchors[4].pos}>
+          <DiningModule />
+        </group>
+      </group>
+
+      {/* ==================== COMPANION + SKY ==================== */}
+      <Dog position={[5.4, GROUND_Y, 1.6]} facing={-0.6} />
+      <Birds />
+
+      {/* ==================== LANDSCAPE / ENVIRONMENT ====================
+           Everything sits on GROUND_Y so the dog isn't in the floor. */}
+      {/* Pine trees */}
+      <PineTree position={[-6.5, GROUND_Y, -3.2]} scale={1.4} />
+      <PineTree position={[-7.5, GROUND_Y, 1.5]} scale={1.1} />
+      <PineTree position={[6.5, GROUND_Y, -3.5]} scale={1.5} />
+      <PineTree position={[8.2, GROUND_Y, 2.0]} scale={1.2} />
+      <PineTree position={[3.5, GROUND_Y, 4.5]} scale={0.9} />
+      <PineTree position={[-4.2, GROUND_Y, 4.8]} scale={1.0} />
+      {/* Rocks — y nudged up by half their scaled radius */}
+      <Rock position={[-3.2, GROUND_Y + 0.3, -2.5]} scale={0.8} seed={0.5} />
+      <Rock position={[3.8, GROUND_Y + 0.2, -2.2]} scale={0.6} seed={1.1} />
+      <Rock position={[-4.5, GROUND_Y + 0.15, 2]} scale={0.5} seed={1.7} />
+      <Rock position={[4.8, GROUND_Y + 0.25, 1.8]} scale={0.7} seed={2.3} />
+      <Rock position={[-2.2, GROUND_Y + 0.12, 3.5]} scale={0.4} seed={2.9} />
+      {/* Path stones leading to the porch */}
+      {Array.from({ length: 5 }).map((_, i) => (
+        <PathStone
+          key={i}
+          position={[2.4, GROUND_Y + 0.015, -2.2 - i * 0.55]}
+          rotation={i * 0.31}
+        />
+      ))}
+
+      {/* ==================== UNDERGLOW & LOCATOR RINGS ==================== */}
+      <mesh
+        ref={underglowRef}
+        position={[0, GROUND_Y + 0.02, 0]}
+        rotation={[-Math.PI / 2, 0, 0]}
+      >
         <ringGeometry args={[L / 2, L / 2 + 0.1, 96]} />
-        <meshBasicMaterial color="#00e5ff" transparent opacity={0.35} toneMapped={false} />
+        <meshBasicMaterial
+          color={COLORS.cyan}
+          transparent
+          opacity={0.35}
+          toneMapped={false}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+      <mesh position={[0, GROUND_Y + 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[1.2, 1.22, 64]} />
+        <meshBasicMaterial color={COLORS.cyan} transparent opacity={0.45} toneMapped={false} />
+      </mesh>
+      <mesh position={[0, GROUND_Y + 0.011, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[2.0, 2.02, 64]} />
+        <meshBasicMaterial
+          color={COLORS.violet}
+          transparent
+          opacity={0.3}
+          toneMapped={false}
+        />
+      </mesh>
+      <mesh position={[0, GROUND_Y + 0.012, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[3.0, 3.015, 96]} />
+        <meshBasicMaterial
+          color={COLORS.cyan}
+          transparent
+          opacity={0.18}
+          toneMapped={false}
+        />
       </mesh>
 
       {/* ==================== GROUND DISC ==================== */}
-      <mesh position={[0, -H / 2 - 0.9, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-        <circleGeometry args={[L * 0.75, 96]} />
-        <meshStandardMaterial color="#050508" roughness={1} metalness={0} />
+      <mesh position={[0, GROUND_Y, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+        <circleGeometry args={[L * 1.6, 96]} />
+        <meshStandardMaterial map={grass} color="#0d1410" roughness={1} metalness={0} />
       </mesh>
 
-      {/* ==================== LOCATOR CROSS ==================== */}
-      <mesh position={[0, -H / 2 - 0.89, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[1.2, 1.22, 64]} />
-        <meshBasicMaterial color="#00e5ff" transparent opacity={0.4} toneMapped={false} />
+      {/* Outer fade ring so the plot reads as a platform */}
+      <mesh position={[0, GROUND_Y - 0.001, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[L * 1.6, L * 1.8, 96]} />
+        <meshBasicMaterial
+          color="#1a2030"
+          transparent
+          opacity={0.4}
+          side={THREE.DoubleSide}
+        />
       </mesh>
-      <mesh position={[0, -H / 2 - 0.88, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[2.0, 2.02, 64]} />
-        <meshBasicMaterial color="#6a5cff" transparent opacity={0.25} toneMapped={false} />
-      </mesh>
-    </group>
-  )
-}
 
-function Wall({ args, position, rotation, color = '#0c0c14', children }) {
-  return (
-    <group position={position} rotation={rotation}>
-      <mesh castShadow receiveShadow>
-        <boxGeometry args={args} />
-        <meshStandardMaterial color={color} roughness={0.45} metalness={0.55} />
-      </mesh>
-      <Edges threshold={15} color="#2a2d35" scale={1.001} />
-      {children}
     </group>
   )
 }

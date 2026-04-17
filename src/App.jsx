@@ -19,10 +19,24 @@ import Timeline from './components/Timeline'
 import Cost from './components/Cost'
 import Team from './components/Team'
 import CTA from './components/CTA'
+import Experiment from './components/Experiment'
 
 export default function App() {
   const progressRef = useRef(0)
   const [loaded, setLoaded] = useState(false)
+  const [route, setRoute] = useState(() =>
+    typeof window !== 'undefined' ? window.location.pathname : '/'
+  )
+
+  useEffect(() => {
+    const onNav = () => setRoute(window.location.pathname)
+    window.addEventListener('popstate', onNav)
+    return () => window.removeEventListener('popstate', onNav)
+  }, [])
+
+  if (route === '/experimentation') {
+    return <Experiment />
+  }
 
   // Smooth-scroll + shared progress ref — StrictMode-safe.
   useEffect(() => {

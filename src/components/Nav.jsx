@@ -13,6 +13,7 @@ export default function Nav() {
         <a href="#offgrid">off-grid</a>
         <a href="#advantages">avantages</a>
         <a href="#cost">coût</a>
+        <a href="/experimentation">vue 3D</a>
       </div>
       <a href="#cta" className="nav__cta">Réserver une démo</a>
     </nav>
