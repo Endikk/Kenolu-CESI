@@ -16,23 +16,24 @@ export default function PinScene() {
       const rect = el.getBoundingClientRect()
       const total = el.offsetHeight - window.innerHeight
       const local = Math.min(Math.max(-rect.top / Math.max(total, 1), 0), 1)
-      if (local < 0.2) setStage(0)
-      else if (local < 0.45) setStage(1)
-      else if (local < 0.7) setStage(2)
-      else setStage(3)
+      // Six evenly spaced thresholds — one stage per label so the
+      // reveal progresses smoothly across the whole pin section.
+      setStage(Math.min(5, Math.floor(local * 6)))
     }
     onScroll()
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
+  // Simple vertical list — each label reveals on its own stage, alternating
+  // left/right. No absolute positioning, so no overlap is possible.
   const labels = [
-    { num: '01', text: 'Steel-and-wood structure',         top: '8%',  left: '2%',  side: 'left',  stage: 0 },
-    { num: '02', text: '1.2 kWp photovoltaic roof',        top: '18%', left: '68%', side: 'right', stage: 1 },
-    { num: '03', text: 'Triple-insulated walls · 180 mm',  top: '52%', left: '3%',  side: 'left',  stage: 1 },
-    { num: '04', text: 'Rainwater harvesting system',      top: '62%', left: '72%', side: 'right', stage: 2 },
-    { num: '05', text: 'Deployable living modules',        top: '88%', left: '30%', side: 'left',  stage: 2 },
-    { num: '06', text: '10 kWh LiFePO₄ battery',           top: '95%', left: '62%', side: 'right', stage: 3 },
+    { num: '01', text: 'Steel-and-wood structure',         side: 'left',  stage: 0 },
+    { num: '02', text: '1.2 kWp photovoltaic roof',        side: 'right', stage: 1 },
+    { num: '03', text: 'Triple-insulated walls · 180 mm',  side: 'left',  stage: 2 },
+    { num: '04', text: 'Rainwater harvesting system',      side: 'right', stage: 3 },
+    { num: '05', text: 'Deployable living modules',        side: 'left',  stage: 4 },
+    { num: '06', text: '10 kWh LiFePO₄ battery',           side: 'right', stage: 5 },
   ]
 
   return (
@@ -47,18 +48,17 @@ export default function PinScene() {
           </h2>
         </div>
 
-        <div className="pin-scene__labels">
+        <ul className="pin-scene__labels">
           {labels.map((l) => (
-            <div
+            <li
               key={l.num}
               className={`reveal-label ${l.side === 'right' ? 'reveal-label--right' : ''} ${stage >= l.stage ? 'is-active' : ''}`}
-              style={{ top: l.top, left: l.left }}
             >
               <span className="reveal-label__num">{l.num}</span>
               {l.text}
-            </div>
+            </li>
           ))}
-        </div>
+        </ul>
       </div>
     </section>
   )

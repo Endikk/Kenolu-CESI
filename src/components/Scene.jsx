@@ -6,17 +6,19 @@ import {
   Sparkles,
   Grid,
   Float,
+  AdaptiveDpr,
+  AdaptiveEvents,
+  PerformanceMonitor,
 } from '@react-three/drei'
 import {
   EffectComposer,
   Bloom,
   Vignette,
   ChromaticAberration,
-  Noise,
   SMAA,
 } from '@react-three/postprocessing'
 import { BlendFunction, KernelSize } from 'postprocessing'
-import { Suspense, useRef } from 'react'
+import { Suspense, useRef, useState } from 'react'
 import * as THREE from 'three'
 import TinyHouse3D from './TinyHouse3D'
 
@@ -27,6 +29,10 @@ import TinyHouse3D from './TinyHouse3D'
  */
 export default function Scene({ progressRef }) {
   const pointerRef = useRef({ x: 0, y: 0 })
+  // Upper DPR cap starts at 1.5 (retina caps at 2× → 4× pixels, way too
+  // expensive for most laptops running this in the background). If the
+  // PerformanceMonitor reports sustained lag, we bump it down further.
+  const [dprCap, setDprCap] = useState(1.5)
 
   return (
     <div
@@ -37,16 +43,28 @@ export default function Scene({ progressRef }) {
       }}
     >
       <Canvas
-        shadows
-        dpr={[1, 2]}
+        shadows="soft"
+        dpr={[0.9, dprCap]}
         gl={{
           antialias: false,
           alpha: true,
           powerPreference: 'high-performance',
           toneMapping: THREE.ACESFilmicToneMapping,
+          // PCF (not PCFSoft) is faster and also silences the
+          // deprecation warning from three 0.183.
+          shadowMapType: THREE.PCFShadowMap,
         }}
         camera={{ position: [0, 2.2, 16], fov: 42 }}
       >
+        {/* Auto-downgrade DPR / disable events when FPS drops. */}
+        <PerformanceMonitor
+          onDecline={() => setDprCap(1)}
+          onFallback={() => setDprCap(0.85)}
+          flipflops={3}
+        />
+        <AdaptiveDpr pixelated />
+        <AdaptiveEvents />
+
         <color attach="background" args={['#1c2740']} />
         <fog attach="fog" args={['#1c2740', 26, 62]} />
 
@@ -57,7 +75,7 @@ export default function Scene({ progressRef }) {
           intensity={2.2}
           color="#fff2d8"
           castShadow
-          shadow-mapSize={[2048, 2048]}
+          shadow-mapSize={[1024, 1024]}
           shadow-bias={-0.0004}
           shadow-camera-far={45}
           shadow-camera-left={-16}
@@ -87,10 +105,11 @@ export default function Scene({ progressRef }) {
             </Float>
           </CameraRig>
 
-          {/* Floating particles */}
+          {/* Floating particles — halved counts; each Sparkles runs a
+              custom shader, so fewer instances = fewer draw calls. */}
           <Sparkles
-            count={80}
-            size={2.2}
+            count={40}
+            size={2.4}
             speed={0.25}
             noise={0.7}
             scale={[18, 8, 18]}
@@ -98,8 +117,8 @@ export default function Scene({ progressRef }) {
             color="#00e5ff"
           />
           <Sparkles
-            count={40}
-            size={1.6}
+            count={20}
+            size={1.8}
             speed={0.15}
             noise={0.5}
             scale={[22, 4, 22]}
@@ -122,6 +141,9 @@ export default function Scene({ progressRef }) {
             infiniteGrid
           />
 
+          {/* `frames={60}` bakes the contact shadow over the first 60
+              frames, then stops re-rendering it — huge win since this
+              used to re-render a depth map every single frame. */}
           <ContactShadows
             position={[0, -2.9, 0]}
             opacity={0.6}
@@ -129,25 +151,27 @@ export default function Scene({ progressRef }) {
             blur={3}
             far={6}
             color="#0a1020"
+            frames={60}
           />
 
           <Environment preset="sunset" />
 
+          {/* Lighter postprocessing: MEDIUM Bloom kernel, dropped the
+              Noise pass (cheap but cumulative), reduced aberration. */}
           <EffectComposer multisampling={0}>
             <SMAA />
             <Bloom
-              intensity={0.55}
-              luminanceThreshold={0.4}
+              intensity={0.5}
+              luminanceThreshold={0.45}
               luminanceSmoothing={0.9}
               mipmapBlur
-              kernelSize={KernelSize.LARGE}
+              kernelSize={KernelSize.MEDIUM}
             />
             <ChromaticAberration
               blendFunction={BlendFunction.NORMAL}
-              offset={[0.0003, 0.0005]}
+              offset={[0.0002, 0.0003]}
             />
-            <Vignette eskil={false} offset={0.3} darkness={0.55} />
-            <Noise opacity={0.03} blendFunction={BlendFunction.OVERLAY} />
+            <Vignette eskil={false} offset={0.3} darkness={0.5} />
           </EffectComposer>
         </Suspense>
       </Canvas>
