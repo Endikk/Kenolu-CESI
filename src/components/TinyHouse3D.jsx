@@ -285,7 +285,13 @@ export default function TinyHouse3D({
           [L / 2 - 1.4, -W / 2 + 0.4],
           [L / 2 - 1.4, W / 2 - 0.4],
         ].map((xy, i) => (
-          <DetailedWheel key={i} position={[xy[0], -0.3, xy[1]]} />
+          // `side` flips the hub face so it always points OUTWARD,
+          // away from the chassis centre, regardless of which flank.
+          <DetailedWheel
+            key={i}
+            position={[xy[0], -0.3, xy[1]]}
+            side={xy[1] > 0 ? 1 : -1}
+          />
         ))}
         {/* Fenders arch over wheels */}
         {[

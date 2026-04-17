@@ -249,8 +249,13 @@ export function makeSolarCellTexture() {
    ------------------------------------------------------------ */
 
 /** Minimal wheel: single smooth tire, silver hub, 5 bolts, dark cap.
-    No concentric rings, no spokes — clean industrial look. */
-export function DetailedWheel({ position }) {
+    `side = +1` puts the hub face on the +Z flank (default), `-1` flips
+    everything to the -Z flank so the outer face of the wheel always
+    points away from the chassis, whatever side it's mounted on. */
+export function DetailedWheel({ position, side = 1 }) {
+  const hubZ = 0.2 * side
+  const boltZ = 0.22 * side
+  const capZ = 0.225 * side
   return (
     <group position={position}>
       {/* Tire */}
@@ -258,8 +263,8 @@ export function DetailedWheel({ position }) {
         <cylinderGeometry args={[WHEEL_RADIUS, WHEEL_RADIUS, 0.38, 48]} />
         <meshStandardMaterial color="#0a0a10" roughness={0.9} metalness={0.05} />
       </mesh>
-      {/* Hub plate (outer face) */}
-      <mesh position={[0, 0, 0.2]} rotation={[Math.PI / 2, 0, 0]}>
+      {/* Hub plate — on the outer face */}
+      <mesh position={[0, 0, hubZ]} rotation={[Math.PI / 2, 0, 0]}>
         <cylinderGeometry args={[0.34, 0.34, 0.04, 32]} />
         <meshStandardMaterial color={COLORS.brightMetal} metalness={1} roughness={0.3} />
       </mesh>
@@ -269,7 +274,7 @@ export function DetailedWheel({ position }) {
         return (
           <mesh
             key={i}
-            position={[Math.cos(a) * 0.22, Math.sin(a) * 0.22, 0.22]}
+            position={[Math.cos(a) * 0.22, Math.sin(a) * 0.22, boltZ]}
             rotation={[Math.PI / 2, 0, 0]}
           >
             <cylinderGeometry args={[0.028, 0.028, 0.03, 6]} />
@@ -278,7 +283,7 @@ export function DetailedWheel({ position }) {
         )
       })}
       {/* Central cap */}
-      <mesh position={[0, 0, 0.225]} rotation={[Math.PI / 2, 0, 0]}>
+      <mesh position={[0, 0, capZ]} rotation={[Math.PI / 2, 0, 0]}>
         <cylinderGeometry args={[0.09, 0.09, 0.04, 24]} />
         <meshStandardMaterial color={COLORS.darkMetal} metalness={1} roughness={0.25} />
       </mesh>
