@@ -24,29 +24,29 @@ const BatteryIcon = () => (
 const systems = [
   {
     icon: <SolarIcon />,
-    title: 'Photovoltaïque 1,2 kWc',
-    desc: "Six panneaux monocristallins haut rendement intégrés au toit. Production annuelle estimée à 1 400 kWh — largement suffisant pour une personne.",
+    title: '1.2 kWp photovoltaic',
+    desc: "Six high-efficiency monocrystalline panels integrated into the roof. Estimated annual yield of 1,400 kWh — comfortably enough for one person.",
     stats: [
-      ['Puissance crête', '1,2 kWc'],
-      ['Surface active', '6,8 m²'],
+      ['Peak power', '1.2 kWp'],
+      ['Active area', '6.8 m²'],
     ],
   },
   {
     icon: <WaterIcon />,
-    title: 'Récupération d’eau',
-    desc: "La toiture collecte l’eau de pluie dans une cuve de 300 L. Une filtration UV + osmose inverse produit une eau potable aux standards européens.",
+    title: 'Rainwater harvesting',
+    desc: "The roof collects rainwater into a 300 L tank. UV filtration plus reverse osmosis delivers drinking water that meets European standards.",
     stats: [
-      ['Cuve principale', '300 L'],
+      ['Main tank', '300 L'],
       ['Filtration', 'UV + RO'],
     ],
   },
   {
     icon: <BatteryIcon />,
-    title: 'Batterie LiFePO₄ 10 kWh',
-    desc: "Un pack lithium-fer-phosphate longue durée (>6 000 cycles) alimente l’ensemble de la maison. Autonomie 5 jours sans soleil.",
+    title: '10 kWh LiFePO₄ battery',
+    desc: "A long-life lithium-iron-phosphate pack (>6,000 cycles) powers the whole house. Five days of autonomy without sun.",
     stats: [
-      ['Capacité', '10 kWh'],
-      ['Autonomie', '~5 jours'],
+      ['Capacity', '10 kWh'],
+      ['Autonomy', '~5 days'],
     ],
   },
 ]
@@ -56,19 +56,19 @@ export default function OffGrid() {
     <section id="offgrid" className="section offgrid">
       <div className="container">
         <Reveal className="section__eyebrow">
-          <span>— SYSTÈMES OFF-GRID</span>
+          <span>— OFF-GRID SYSTEMS</span>
         </Reveal>
 
         <Reveal as="h2" className="section__title">
-          100% autonome.<br />
-          <em>0% compromis.</em>
+          100% autonomous.<br />
+          <em>0% compromise.</em>
         </Reveal>
 
         <Reveal className="section__kicker">
           <p>
-            Kenolu produit, stocke et régénère toutes ses ressources. Aucun raccordement
-            nécessaire : posez-la en bord de forêt, en montagne ou face à la mer, elle
-            fonctionne dès le premier jour.
+            Kenolu produces, stores and regenerates every resource it needs.
+            No hookup required: drop it at the edge of a forest, in the
+            mountains, or facing the sea — it runs from day one.
           </p>
         </Reveal>
 

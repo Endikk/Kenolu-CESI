@@ -12,7 +12,7 @@ export default function StatusBadge() {
   return (
     <div className="status-badge" aria-hidden>
       <span className="status-badge__dot" />
-      <span>STUDIO · PARIS</span>
+      <span>STUDIO · ROUEN</span>
       <span className="status-badge__time">{time}</span>
     </div>
   )
@@ -20,7 +20,7 @@ export default function StatusBadge() {
 
 function fmt() {
   const d = new Date()
-  return d.toLocaleTimeString('fr-FR', {
+  return d.toLocaleTimeString('en-GB', {
     hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Europe/Paris',
   })
 }

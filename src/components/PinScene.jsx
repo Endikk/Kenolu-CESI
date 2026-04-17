@@ -27,12 +27,12 @@ export default function PinScene() {
   }, [])
 
   const labels = [
-    { num: '01', text: 'Structure acier-bois',            top: '8%',  left: '2%',  side: 'left',  stage: 0 },
-    { num: '02', text: 'Toit photovoltaïque 1,2 kWc',     top: '18%', left: '68%', side: 'right', stage: 1 },
-    { num: '03', text: 'Murs triple-isolés 180 mm',       top: '52%', left: '3%',  side: 'left',  stage: 1 },
-    { num: '04', text: 'Récupération d’eau de pluie',     top: '62%', left: '72%', side: 'right', stage: 2 },
-    { num: '05', text: 'Modules de vie déployables',      top: '88%', left: '30%', side: 'left',  stage: 2 },
-    { num: '06', text: 'Batterie LiFePO₄ 10 kWh',         top: '95%', left: '62%', side: 'right', stage: 3 },
+    { num: '01', text: 'Steel-and-wood structure',         top: '8%',  left: '2%',  side: 'left',  stage: 0 },
+    { num: '02', text: '1.2 kWp photovoltaic roof',        top: '18%', left: '68%', side: 'right', stage: 1 },
+    { num: '03', text: 'Triple-insulated walls · 180 mm',  top: '52%', left: '3%',  side: 'left',  stage: 1 },
+    { num: '04', text: 'Rainwater harvesting system',      top: '62%', left: '72%', side: 'right', stage: 2 },
+    { num: '05', text: 'Deployable living modules',        top: '88%', left: '30%', side: 'left',  stage: 2 },
+    { num: '06', text: '10 kWh LiFePO₄ battery',           top: '95%', left: '62%', side: 'right', stage: 3 },
   ]
 
   return (
@@ -40,10 +40,10 @@ export default function PinScene() {
       <div className="pin-scene__sticky container">
         <div className="pin-scene__header">
           <div className="section__eyebrow" style={{ justifyContent: 'center' }}>
-            <span>COUPE TECHNIQUE · VUE DÉPLOYÉE</span>
+            <span>TECHNICAL CROSS-SECTION · EXPLODED VIEW</span>
           </div>
           <h2 className="section__title" style={{ margin: '0 auto' }}>
-            Déroulez pour <em>ouvrir la maison.</em>
+            Scroll to <em>open the house.</em>
           </h2>
         </div>
 

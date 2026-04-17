@@ -5,19 +5,19 @@ const team = [
     initials: 'AE',
     name: 'Alex Émery',
     role: 'Architecture & volumes',
-    bio: 'Conception spatiale, plans 3D, intégration paysagère. Pilote la vision d’ensemble du projet Kenolu.',
+    bio: 'Spatial design, 3D drawings, landscape integration. Drives the overall vision of the Kenolu project.',
   },
   {
     initials: 'NC',
     name: 'Naïm Costa',
-    role: 'Ingénierie off-grid',
-    bio: 'Dimensionnement électrique, plomberie, autonomie énergétique. Veille à ce que la maison ne dépende de rien.',
+    role: 'Off-grid engineering',
+    bio: 'Electrical sizing, plumbing, energy autonomy. Makes sure the house depends on nothing.',
   },
   {
     initials: 'LV',
     name: 'Léa Volt',
-    role: 'Direction artistique',
-    bio: 'Matériaux, textures, éclairage LED, identité visuelle. Donne à Kenolu son ambiance nocturne et apaisante.',
+    role: 'Art direction',
+    bio: 'Materials, textures, LED lighting, visual identity. Gives Kenolu its calm, nocturnal atmosphere.',
   },
 ]
 
@@ -26,12 +26,12 @@ export default function Team() {
     <section id="team" className="section">
       <div className="container">
         <Reveal className="section__eyebrow">
-          <span>— ÉQUIPE</span>
+          <span>— TEAM</span>
         </Reveal>
 
         <Reveal as="h2" className="section__title">
-          Trois regards,<br />
-          <em>un manifeste.</em>
+          Three viewpoints,<br />
+          <em>one manifesto.</em>
         </Reveal>
 
         <Reveal className="team__grid reveal-stagger" stagger>

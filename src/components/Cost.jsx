@@ -1,18 +1,18 @@
 import Reveal from './Reveal'
 
 const costs = [
-  { name: 'Châssis homologué + roues', sub: 'Acier galvanisé tandem', price: '8 200 €' },
-  { name: 'Structure & ossature bois/acier', sub: 'Sigma + CLT', price: '14 500 €' },
-  { name: 'Isolation biosourcée', sub: 'Laine de bois 180 mm', price: '4 800 €' },
-  { name: 'Bardage + menuiseries', sub: 'Shou Sugi Ban + alu anodisé', price: '11 200 €' },
-  { name: 'Toiture photovoltaïque', sub: '1,2 kWc intégré', price: '6 400 €' },
-  { name: 'Batterie LiFePO₄ 10 kWh', sub: 'Onduleur hybride inclus', price: '7 900 €' },
-  { name: 'Plomberie + filtration eau', sub: 'Cuve 300 L, UV, osmose', price: '3 600 €' },
-  { name: 'Cuisine + électroménager', sub: 'Induction, frigo 12V', price: '5 400 €' },
-  { name: 'Salle d’eau complète', sub: 'Douche, toilettes sèches, VMC DF', price: '4 100 €' },
-  { name: 'Mobilier intégré sur-mesure', sub: 'Mélèze, métal, stratifié', price: '7 800 €' },
-  { name: 'Éclairage LED + domotique', sub: 'KNX + app mobile', price: '2 900 €' },
-  { name: 'Main d’œuvre & assemblage', sub: '640 h réparties sur 11 semaines', price: '18 200 €' },
+  { name: 'Road-certified chassis + wheels', sub: 'Galvanised tandem steel', price: '€8,200' },
+  { name: 'Structure & wood/steel frame', sub: 'Sigma + CLT', price: '€14,500' },
+  { name: 'Bio-sourced insulation', sub: '180 mm wood-fibre wool', price: '€4,800' },
+  { name: 'Cladding + joinery', sub: 'Shou Sugi Ban + anodised aluminium', price: '€11,200' },
+  { name: 'Photovoltaic roof', sub: 'Integrated 1.2 kWp', price: '€6,400' },
+  { name: '10 kWh LiFePO₄ battery', sub: 'Hybrid inverter included', price: '€7,900' },
+  { name: 'Plumbing + water filtration', sub: '300 L tank, UV, reverse osmosis', price: '€3,600' },
+  { name: 'Kitchen + appliances', sub: 'Induction, 12V fridge', price: '€5,400' },
+  { name: 'Full bathroom', sub: 'Shower, dry toilet, dual-flow HRV', price: '€4,100' },
+  { name: 'Bespoke integrated furniture', sub: 'Larch, metal, laminate', price: '€7,800' },
+  { name: 'LED lighting + smart home', sub: 'KNX + mobile app', price: '€2,900' },
+  { name: 'Labour & assembly', sub: '640 h spread over 11 weeks', price: '€18,200' },
 ]
 
 export default function Cost() {
@@ -20,19 +20,19 @@ export default function Cost() {
     <section id="cost" className="section">
       <div className="container">
         <Reveal className="section__eyebrow">
-          <span>— COÛT DE FABRICATION</span>
+          <span>— MANUFACTURING COST</span>
         </Reveal>
 
         <Reveal as="h2" className="section__title">
-          Un investissement<br />
-          <em>transparent.</em>
+          A transparent<br />
+          <em>investment.</em>
         </Reveal>
 
         <Reveal className="section__kicker">
           <p>
-            Ci-dessous le détail complet du coût de production. Ce tarif correspond à
-            une unité pilote — il diminue de 18 % à partir de la deuxième fabrication
-            grâce aux économies de série.
+            Below is the full breakdown of the production cost. This
+            pricing is for a pilot unit — it drops by 18% from the second
+            build onward thanks to series economics.
           </p>
         </Reveal>
 
@@ -50,12 +50,12 @@ export default function Cost() {
           </div>
 
           <aside className="cost__total">
-            <div className="cost__total-label">Total — unité pilote</div>
-            <div className="cost__total-value">95 000&nbsp;€</div>
+            <div className="cost__total-label">Total — pilot unit</div>
+            <div className="cost__total-value">€95,000</div>
             <p className="cost__total-note">
-              Inclut matériaux certifiés, main d’œuvre, finitions, systèmes off-grid
-              complets et mise en service. Garantie structure 20 ans.
-              Éligible au crédit habitat mobile.
+              Includes certified materials, labour, finishes, the full
+              off-grid systems and commissioning. 20-year structural
+              warranty. Eligible for mobile-dwelling financing.
             </p>
           </aside>
         </Reveal>

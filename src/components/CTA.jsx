@@ -6,22 +6,22 @@ export default function CTA() {
     <section id="cta" className="section cta">
       <div className="container">
         <Reveal>
-          <h2 className="cta__title">Prêt·e à<br />vous installer ?</h2>
+          <h2 className="cta__title">Ready to<br />move in?</h2>
         </Reveal>
         <Reveal>
           <div style={{ marginTop: 40 }}>
             <MagneticButton href="mailto:hello@kenolu.studio" strength={0.3}>
-              Réserver une démonstration
+              Book a demonstration
             </MagneticButton>
           </div>
         </Reveal>
       </div>
 
       <footer className="footer container">
-        <div>© 2026 Kenolu Studio — Tiny House Off-Grid</div>
+        <div>© 2026 Kenolu Studio — Off-Grid Tiny House</div>
         <div className="footer__right">
-          <a href="#top">Haut de page</a>
-          <a href="#">Mentions légales</a>
+          <a href="#top">Back to top</a>
+          <a href="#">Legal</a>
           <a href="#">Instagram</a>
         </div>
       </footer>

@@ -19,10 +19,35 @@ import Timeline from './components/Timeline'
 import Cost from './components/Cost'
 import Team from './components/Team'
 import CTA from './components/CTA'
+import Experiment from './components/Experiment'
 
 export default function App() {
   const progressRef = useRef(0)
   const [loaded, setLoaded] = useState(false)
+  // Strip Vite's BASE_URL prefix so the app reasons about the logical
+  // path (`/`, `/experimentation`) regardless of where it's deployed
+  // (dev at `/`, GitHub Pages at `/Kenolu-CESI/`).
+  const baseWithoutSlash = import.meta.env.BASE_URL.replace(/\/$/, '')
+  const toLogicalPath = (p) =>
+    baseWithoutSlash && p.startsWith(baseWithoutSlash)
+      ? p.slice(baseWithoutSlash.length) || '/'
+      : p
+  const [route, setRoute] = useState(() =>
+    typeof window !== 'undefined'
+      ? toLogicalPath(window.location.pathname)
+      : '/'
+  )
+
+  useEffect(() => {
+    const onNav = () => setRoute(toLogicalPath(window.location.pathname))
+    window.addEventListener('popstate', onNav)
+    return () => window.removeEventListener('popstate', onNav)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  if (route === '/experimentation') {
+    return <Experiment />
+  }
 
   // Smooth-scroll + shared progress ref — StrictMode-safe.
   useEffect(() => {
@@ -76,7 +101,7 @@ export default function App() {
       <div className={`loader ${loaded ? 'is-done' : ''}`}>
         <div className="loader__logo">KENOLU</div>
         <div className="loader__bar" />
-        <div className="loader__text">Calibration des systèmes…</div>
+        <div className="loader__text">Calibrating systems…</div>
       </div>
 
       <ScrollProgress />

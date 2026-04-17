@@ -1,12 +1,12 @@
 import Reveal from './Reveal'
 
 const materials = [
-  { num: '001', name: 'Acier noir brossé', desc: 'Ossature secondaire et encadrements — recyclé à 85 %, traitement antifingerprint.', tag: 'Structure' },
-  { num: '002', name: 'Bois de mélèze noirci', desc: 'Bardage extérieur traité selon la technique japonaise Shou Sugi Ban — ignifuge, sans entretien.', tag: 'Façade' },
-  { num: '003', name: 'Aluminium anodisé', desc: 'Menuiseries et profilés. Rupture de pont thermique, teinte RAL 9005 satiné.', tag: 'Menuiserie' },
-  { num: '004', name: 'Verre triple-vitrage', desc: 'Ug = 0,5 W/m²K. Contrôle solaire intégré, facteur solaire 0,35.', tag: 'Ouvertures' },
-  { num: '005', name: 'Laine de bois dense', desc: '180 mm — R = 7 m²K/W. Déphasage thermique 12 h, biosourcée.', tag: 'Isolation' },
-  { num: '006', name: 'Microbéton ciré graphite', desc: 'Sol intérieur 8 mm. Chauffant par le dessous, apaisant, résistant à l’humidité.', tag: 'Sol' },
+  { num: '001', name: 'Brushed black steel', desc: 'Secondary frame and surrounds — 85% recycled, anti-fingerprint finish.', tag: 'Structure' },
+  { num: '002', name: 'Charred larch wood', desc: 'Exterior cladding treated with the Japanese Shou Sugi Ban technique — fireproof, maintenance-free.', tag: 'Cladding' },
+  { num: '003', name: 'Anodised aluminium', desc: 'Joinery and profiles. Thermal break, satin RAL 9005 finish.', tag: 'Joinery' },
+  { num: '004', name: 'Triple-glazed glass', desc: 'Ug = 0.5 W/m²K. Integrated solar control, g-value 0.35.', tag: 'Openings' },
+  { num: '005', name: 'Dense wood-fibre wool', desc: '180 mm — R = 7 m²K/W. 12 h thermal lag, bio-sourced.', tag: 'Insulation' },
+  { num: '006', name: 'Waxed graphite microconcrete', desc: 'Interior floor, 8 mm. Underfloor heating, calming, moisture-resistant.', tag: 'Floor' },
 ]
 
 export default function Materials() {
@@ -14,19 +14,19 @@ export default function Materials() {
     <section id="materials" className="section">
       <div className="container">
         <Reveal className="section__eyebrow">
-          <span>— MATÉRIAUX</span>
+          <span>— MATERIALS</span>
         </Reveal>
 
         <Reveal as="h2" className="section__title">
-          Peu de matières.<br />
-          <em>Beaucoup de soin.</em>
+          Few materials.<br />
+          <em>Lots of care.</em>
         </Reveal>
 
         <Reveal className="section__kicker">
           <p>
-            Six matériaux pour toute la maison. Chacun choisi pour sa durabilité, son
-            impact carbone mesuré et son vieillissement esthétique. Zéro PVC, zéro colle
-            toxique, traçabilité européenne.
+            Six materials for the whole house. Each chosen for its
+            durability, measured carbon footprint and graceful ageing.
+            Zero PVC, zero toxic glue, fully European-traced.
           </p>
         </Reveal>
 

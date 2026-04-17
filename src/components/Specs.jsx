@@ -2,14 +2,14 @@ import Reveal from './Reveal'
 import CountUp from './CountUp'
 
 const specs = [
-  { label: 'Surface habitable', value: 28, decimals: 0, unit: 'm²' },
-  { label: 'Longueur', value: 7.2, decimals: 1, unit: 'm' },
-  { label: 'Largeur', value: 2.5, decimals: 1, unit: 'm' },
-  { label: 'Hauteur', value: 3.8, decimals: 1, unit: 'm' },
-  { label: 'PTAC', value: 3.5, decimals: 1, unit: 'T' },
-  { label: 'Capacité', raw: '1+1', unit: 'pers./chien' },
-  { label: 'Isolation R', value: 7, decimals: 0, unit: 'm²K/W' },
-  { label: 'Autonomie', value: 100, decimals: 0, unit: '%' },
+  { label: 'Living area', value: 28, decimals: 0, unit: 'm²' },
+  { label: 'Length', value: 7.2, decimals: 1, unit: 'm' },
+  { label: 'Width', value: 2.5, decimals: 1, unit: 'm' },
+  { label: 'Height', value: 3.8, decimals: 1, unit: 'm' },
+  { label: 'GVWR', value: 3.5, decimals: 1, unit: 'T' },
+  { label: 'Capacity', raw: '1+1', unit: 'person/dog' },
+  { label: 'R-value', value: 7, decimals: 0, unit: 'm²K/W' },
+  { label: 'Autonomy', value: 100, decimals: 0, unit: '%' },
 ]
 
 export default function Specs() {
@@ -17,19 +17,19 @@ export default function Specs() {
     <section id="specs" className="section">
       <div className="container">
         <Reveal className="section__eyebrow">
-          <span>— SPÉCIFICATIONS</span>
+          <span>— SPECIFICATIONS</span>
         </Reveal>
 
         <Reveal as="h2" className="section__title">
           Dimensions<br />
-          <em>mesurées</em> au millimètre.
+          <em>measured</em> to the millimetre.
         </Reveal>
 
         <Reveal className="section__kicker">
           <p>
-            Pensée pour circuler sur route européenne sans convoi spécial.
-            Le châssis tandem galvanisé et la structure en acier léger Sigma garantissent
-            rigidité et sécurité à 110&nbsp;km/h.
+            Designed to travel European roads without a special convoy.
+            The galvanised tandem chassis and lightweight Sigma steel frame
+            guarantee rigidity and safety at 110&nbsp;km/h.
           </p>
         </Reveal>
 
