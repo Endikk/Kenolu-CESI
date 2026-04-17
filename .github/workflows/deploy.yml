@@ -38,6 +38,10 @@ jobs:
 
       - name: Build
         run: npm run build
+        env:
+          # Tells vite.config.js to prefix assets with /Kenolu-CESI/
+          # because GitHub Pages serves this repo at that subpath.
+          GH_PAGES: 'true'
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
