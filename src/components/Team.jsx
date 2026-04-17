@@ -2,20 +2,20 @@ import Reveal from './Reveal'
 
 const team = [
   {
-    initials: 'AE',
-    name: 'Alex Émery',
+    initials: 'LL',
+    name: 'Lucas',
     role: 'Architecture & volumes',
     bio: 'Spatial design, 3D drawings, landscape integration. Drives the overall vision of the Kenolu project.',
   },
   {
-    initials: 'NC',
-    name: 'Naïm Costa',
+    initials: 'NP',
+    name: 'Noah',
     role: 'Off-grid engineering',
     bio: 'Electrical sizing, plumbing, energy autonomy. Makes sure the house depends on nothing.',
   },
   {
-    initials: 'LV',
-    name: 'Léa Volt',
+    initials: 'KM',
+    name: 'Kevin',
     role: 'Art direction',
     bio: 'Materials, textures, LED lighting, visual identity. Gives Kenolu its calm, nocturnal atmosphere.',
   },
