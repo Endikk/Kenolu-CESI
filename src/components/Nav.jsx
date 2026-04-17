@@ -8,10 +8,11 @@ export default function Nav() {
       <div className="nav__links">
         <a href="#concept">concept</a>
         <a href="#specs">specs</a>
+        <a href="#plan">plan</a>
         <a href="#modules">modules</a>
         <a href="#offgrid">off-grid</a>
+        <a href="#advantages">avantages</a>
         <a href="#cost">coût</a>
-        <a href="#team">équipe</a>
       </div>
       <a href="#cta" className="nav__cta">Réserver une démo</a>
     </nav>

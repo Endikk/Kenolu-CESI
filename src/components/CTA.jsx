@@ -1,4 +1,5 @@
 import Reveal from './Reveal'
+import MagneticButton from './MagneticButton'
 
 export default function CTA() {
   return (
@@ -8,9 +9,11 @@ export default function CTA() {
           <h2 className="cta__title">Prêt·e à<br />vous installer ?</h2>
         </Reveal>
         <Reveal>
-          <a href="mailto:hello@kenolu.studio" className="cta__btn">
-            Réserver une démonstration
-          </a>
+          <div style={{ marginTop: 40 }}>
+            <MagneticButton href="mailto:hello@kenolu.studio" strength={0.3}>
+              Réserver une démonstration
+            </MagneticButton>
+          </div>
         </Reveal>
       </div>
 
