@@ -54,6 +54,7 @@ import {
   DogBed,
   CoffeeTable,
   TVModule,
+  WorkDesk,
   // environment
   PineTree,
   Rock,
@@ -834,9 +835,21 @@ export default function TinyHouse3D({
         </group>
       </group>
 
-      {/* Dog pouf — tucked on the floor UNDER the loft mezzanine
-          so the dog has its own nook. Stays on the floor on explode. */}
-      <group position={[2.6, floorTop + 0.07, -0.15]} rotation={[0, -0.35, 0]}>
+      {/* Under-loft workstation + companion nook.
+          WorkDesk = drawer cabinet (left) + continuous wood desktop
+          + PC screen, keyboard & mouse. Its back sits flush against
+          the interior of the back wall; the desktop is 0.5 m deep,
+          so the group centre is 0.25 m off the wall plus a 1 cm gap.
+          The dog pouf sits on the floor in front of the desk, still
+          under the mezzanine. Neither piece takes part in the explode
+          animation — they stay on the floor. */}
+      <group
+        position={[2.4, floorTop + 0.315, W / 2 - T / 2 - 0.26]}
+        rotation={[0, Math.PI, 0]}
+      >
+        <WorkDesk />
+      </group>
+      <group position={[2.5, floorTop + 0.07, 0.05]} rotation={[0, -0.25, 0]}>
         <DogBed />
       </group>
 
