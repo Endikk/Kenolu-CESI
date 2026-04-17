@@ -1,5 +1,6 @@
 import { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
+import { Html } from '@react-three/drei'
 import * as THREE from 'three'
 
 import {
@@ -46,11 +47,13 @@ import {
   LoftBedModule,
   BathroomModule,
   SofaModule,
-  DiningModule,
   BatteryModule,
   WaterTank,
   LoftLadder,
   PropaneTank,
+  DogBed,
+  CoffeeTable,
+  TVModule,
   // environment
   PineTree,
   Rock,
@@ -72,7 +75,11 @@ import {
 const EASE = (t) => (t < 0 ? 0 : t > 1 ? 1 : t * t * (3 - 2 * t))
 const clamp01 = (t) => (t < 0 ? 0 : t > 1 ? 1 : t)
 
-export default function TinyHouse3D({ progressRef, disableAutoRotate = false }) {
+export default function TinyHouse3D({
+  progressRef,
+  disableAutoRotate = false,
+  videoId = null,
+}) {
   // ---------------- Refs driven by useFrame ----------------
   const root = useRef()
   const roofRef = useRef()
@@ -110,16 +117,19 @@ export default function TinyHouse3D({ progressRef, disableAutoRotate = false }) 
   const floorTop = FLOOR_Y + FLOOR_THICKNESS / 2
   const interiorAnchors = useMemo(
     () => [
-      // kitchen — back-left corner, counter height
-      { id: 'kitchen', pos: [-L / 2 + 1.1, floorTop + 0.45, -W / 2 + 0.4] },
+      // kitchen — rotated 90° so the counter back presses against the LEFT
+      // end wall; counter depth (0.7) runs along X after rotation.
+      {
+        id: 'kitchen',
+        pos: [-L / 2 + 0.5, floorTop + 0.45, 0.1],
+        rot: [0, Math.PI / 2, 0],
+      },
       // loft bed — right end, raised as a mezzanine
-      { id: 'loft', pos: [L / 2 - 1.2, floorTop + 1.45, 0] },
+      { id: 'loft', pos: [L / 2 - 1.2, floorTop + 1.45, 0], rot: [0, 0, 0] },
       // bathroom cube — middle, against back wall
-      { id: 'bath', pos: [0.2, floorTop + 0.9, W / 2 - 0.55] },
-      // sofa — front, lower
-      { id: 'sofa', pos: [-0.4, floorTop + 0.3, -W / 2 + 0.55] },
-      // dining — between bath and loft, low
-      { id: 'dining', pos: [1.6, floorTop + 0.4, W / 2 - 0.8] },
+      { id: 'bath', pos: [0.2, floorTop + 0.9, W / 2 - 0.55], rot: [0, 0, 0] },
+      // single-seat sofa — front wall, close to the kitchen end
+      { id: 'sofa', pos: [-1.8, floorTop + 0.3, -W / 2 + 0.55], rot: [0, 0, 0] },
     ],
     [floorTop]
   )
@@ -184,7 +194,11 @@ export default function TinyHouse3D({ progressRef, disableAutoRotate = false }) 
         const base = interiorAnchors[i]
         if (!base) return
         child.position.y = base.pos[1] + tpInterior * (0.3 + i * 0.22)
-        child.rotation.y = tpInterior * 0.1 * (i % 2 === 0 ? 1 : -1)
+        // Animate rotation AROUND the anchor's base rotation so rotated
+        // modules (e.g. the kitchen) don't snap back to Y=0 on explode.
+        const baseRotY = base.rot?.[1] ?? 0
+        child.rotation.y =
+          baseRotY + tpInterior * 0.1 * (i % 2 === 0 ? 1 : -1)
       })
     }
 
@@ -412,11 +426,31 @@ export default function TinyHouse3D({ progressRef, disableAutoRotate = false }) 
         <group position={[1.0, 0.5, 0]}>
           <Window width={1.0} height={0.8} mullion={false} />
         </group>
-        {/* Door jamb trim (on exterior side only) */}
-        <mesh position={[2.4, -0.2, -T / 2 - 0.003]}>
-          <boxGeometry args={[1.02, 2.16, 0.02]} />
-          <meshStandardMaterial color={COLORS.darkWood} roughness={0.6} />
-        </mesh>
+        {/* Door casing — 4 trim strips around the opening (NOT a full
+            panel, so the opening stays hollow and the door can swing out
+            freely without anything blocking behind it). */}
+        <group position={[2.4, -0.18, -T / 2 - 0.015]}>
+          {/* Head (top) */}
+          <mesh position={[0, 2.05 / 2 + 0.025, 0]} castShadow>
+            <boxGeometry args={[1.02, 0.05, 0.03]} />
+            <meshStandardMaterial color={COLORS.darkWood} roughness={0.6} />
+          </mesh>
+          {/* Left jamb */}
+          <mesh position={[-0.95 / 2 - 0.025, 0, 0]} castShadow>
+            <boxGeometry args={[0.05, 2.05 + 0.1, 0.03]} />
+            <meshStandardMaterial color={COLORS.darkWood} roughness={0.6} />
+          </mesh>
+          {/* Right jamb */}
+          <mesh position={[0.95 / 2 + 0.025, 0, 0]} castShadow>
+            <boxGeometry args={[0.05, 2.05 + 0.1, 0.03]} />
+            <meshStandardMaterial color={COLORS.darkWood} roughness={0.6} />
+          </mesh>
+          {/* Threshold (bottom) */}
+          <mesh position={[0, -2.05 / 2 - 0.02, 0]}>
+            <boxGeometry args={[1.02, 0.04, 0.03]} />
+            <meshStandardMaterial color={COLORS.darkWood} roughness={0.6} />
+          </mesh>
+        </group>
         {/* Pivoting door leaf — sits inside the opening, swings outward */}
         <group ref={doorRef} position={[1.97, -0.2, 0]}>
           <group position={[0.45, 0, 0]}>
@@ -455,6 +489,41 @@ export default function TinyHouse3D({ progressRef, disableAutoRotate = false }) 
             <Window width={0.9} height={1.2} mullion={i === 1} />
           </group>
         ))}
+        {/* Flat-screen TV mounted on the interior face, between the left
+            window and the middle window, at a comfortable viewing height
+            for the sofa on the opposite wall. Rotated π so the screen
+            points toward -Z (into the living space).
+            When the user passes a videoId, an <Html transform> overlays
+            a YouTube iframe exactly on the screen — the video plays
+            ONLY on the 3D TV, not in any modal. */}
+        <group position={[-1.1, 0.3, -T / 2 - 0.04]} rotation={[0, Math.PI, 0]}>
+          <TVModule />
+          {videoId && (
+            <Html
+              transform
+              occlude="blending"
+              position={[0, 0, 0.008]}
+              scale={0.002}
+              style={{
+                width: '570px',
+                height: '320px',
+                pointerEvents: 'auto',
+                background: '#000',
+              }}
+            >
+              <iframe
+                key={videoId}
+                width="570"
+                height="320"
+                src={`https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1`}
+                title="TV Kenolu"
+                allow="autoplay; encrypted-media; picture-in-picture"
+                allowFullScreen
+                style={{ border: 0, display: 'block', width: '100%', height: '100%' }}
+              />
+            </Html>
+          )}
+        </group>
         {/* Violet baseboard on exterior */}
         <mesh position={[0, -H / 2 + 0.05, T / 2 + 0.005]}>
           <boxGeometry args={[L - 0.2, 0.03, 0.015]} />
@@ -695,24 +764,48 @@ export default function TinyHouse3D({ progressRef, disableAutoRotate = false }) 
 
       {/* ==================== INTERIOR FURNITURE ==================== */}
       <group ref={interiorRef}>
-        <group position={interiorAnchors[0].pos}>
+        <group
+          position={interiorAnchors[0].pos}
+          rotation={interiorAnchors[0].rot}
+        >
           <KitchenModule />
         </group>
-        <group position={interiorAnchors[1].pos}>
+        <group
+          position={interiorAnchors[1].pos}
+          rotation={interiorAnchors[1].rot}
+        >
           <LoftBedModule />
-          <group position={[-1.0, -1.1, 0.6]}>
-            <LoftLadder />
+          {/* Ladder at the front-left corner of the loft, bottom resting on
+              the floor (local y = floorTop - loft anchor y = -1.45),
+              reaching the platform 1.5 m above. */}
+          <group position={[-0.95, -1.45, 0.35]}>
+            <LoftLadder height={1.5} />
           </group>
         </group>
-        <group position={interiorAnchors[2].pos}>
+        <group
+          position={interiorAnchors[2].pos}
+          rotation={interiorAnchors[2].rot}
+        >
           <BathroomModule />
         </group>
-        <group position={interiorAnchors[3].pos}>
+        <group
+          position={interiorAnchors[3].pos}
+          rotation={interiorAnchors[3].rot}
+        >
           <SofaModule />
         </group>
-        <group position={interiorAnchors[4].pos}>
-          <DiningModule />
-        </group>
+      </group>
+
+      {/* Dog pouf — tucked on the floor UNDER the loft mezzanine
+          so the dog has its own nook. Stays on the floor on explode. */}
+      <group position={[2.6, floorTop + 0.07, -0.15]} rotation={[0, -0.35, 0]}>
+        <DogBed />
+      </group>
+
+      {/* Low coffee table right beside the single-seat sofa (+X side),
+          slight gap so it's "next to" the sofa, not touching. */}
+      <group position={[-0.95, floorTop + 0.01, -W / 2 + 0.55]}>
+        <CoffeeTable />
       </group>
 
       {/* ==================== COMPANION + SKY ==================== */}

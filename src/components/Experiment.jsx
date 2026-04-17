@@ -9,6 +9,26 @@ import { Suspense, useRef, useState } from 'react'
 import * as THREE from 'three'
 import TinyHouse3D from './TinyHouse3D'
 
+/** Extract the 11-character YouTube video ID from any common URL form
+    (or pass through if the user already pasted a bare ID). Returns null
+    when nothing valid is found. */
+function parseYouTubeId(raw) {
+  if (!raw) return null
+  const url = raw.trim()
+  const patterns = [
+    /youtube\.com\/watch\?v=([A-Za-z0-9_-]{11})/,
+    /youtu\.be\/([A-Za-z0-9_-]{11})/,
+    /youtube\.com\/embed\/([A-Za-z0-9_-]{11})/,
+    /youtube\.com\/shorts\/([A-Za-z0-9_-]{11})/,
+  ]
+  for (const p of patterns) {
+    const m = url.match(p)
+    if (m) return m[1]
+  }
+  if (/^[A-Za-z0-9_-]{11}$/.test(url)) return url
+  return null
+}
+
 /**
  * Standalone viewer. The TinyHouse sits on a white studio background;
  * user controls the camera with OrbitControls:
@@ -16,15 +36,36 @@ import TinyHouse3D from './TinyHouse3D'
  *   - wheel      → zoom in/out
  *   - right-drag → pan
  * A slider on the HUD also drives the explode-view progress (0 → 1).
+ * A URL input lets the user cast any YouTube video onto the 3D TV screen.
  */
 export default function Experiment() {
   const progressRef = useRef(0)
   const [progress, setProgress] = useState(0)
+  const [videoUrl, setVideoUrl] = useState('')
+  const [videoId, setVideoId] = useState(null)
+  const [videoError, setVideoError] = useState(false)
 
   const onProgressChange = (e) => {
     const v = Number(e.target.value)
     setProgress(v)
     progressRef.current = v
+  }
+
+  const onSubmitVideo = (e) => {
+    e.preventDefault()
+    const id = parseYouTubeId(videoUrl)
+    if (id) {
+      setVideoId(id)
+      setVideoError(false)
+    } else {
+      setVideoError(true)
+    }
+  }
+
+  const onStopVideo = () => {
+    setVideoId(null)
+    setVideoUrl('')
+    setVideoError(false)
   }
 
   return (
@@ -71,7 +112,11 @@ export default function Experiment() {
         />
 
         <Suspense fallback={null}>
-          <TinyHouse3D progressRef={progressRef} disableAutoRotate />
+          <TinyHouse3D
+            progressRef={progressRef}
+            disableAutoRotate
+            videoId={videoId}
+          />
 
           <ContactShadows
             position={[0, -2.9, 0]}
@@ -118,6 +163,58 @@ export default function Experiment() {
           <span className="experiment__chip-num">03</span>
           Clic droit → translation
         </div>
+      </aside>
+
+      {/* URL form pinned to the right edge. The pasted YouTube URL is
+          parsed to an 11-char video ID and the video plays ONLY on the
+          3D TV screen inside the tiny house — no modal, no overlay. */}
+      <aside className="experiment__hud-right">
+        <form
+          className="experiment__video-form"
+          onSubmit={onSubmitVideo}
+        >
+          <div className="experiment__video-head">
+            <span className="experiment__video-dot" aria-hidden />
+            <span className="experiment__video-title">TV INTÉGRÉE</span>
+          </div>
+          <label className="experiment__video-field">
+            <span>URL YouTube</span>
+            <input
+              type="text"
+              inputMode="url"
+              placeholder="https://youtu.be/…"
+              value={videoUrl}
+              onChange={(e) => {
+                setVideoUrl(e.target.value)
+                if (videoError) setVideoError(false)
+              }}
+            />
+          </label>
+          {videoError && (
+            <span className="experiment__video-error">
+              URL invalide. Colle un lien YouTube.
+            </span>
+          )}
+          <div className="experiment__video-actions">
+            <button type="submit" className="experiment__video-play-btn">
+              ▶ Lancer
+            </button>
+            {videoId && (
+              <button
+                type="button"
+                className="experiment__video-stop-btn"
+                onClick={onStopVideo}
+              >
+                ■ Arrêter
+              </button>
+            )}
+          </div>
+          {videoId && (
+            <span className="experiment__video-status">
+              En lecture sur la TV · ID {videoId}
+            </span>
+          )}
+        </form>
       </aside>
 
       <footer className="experiment__hud-bottom">

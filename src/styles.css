@@ -2005,10 +2005,155 @@ h1, h2, h3, h4 {
   cursor: pointer;
 }
 
+/* TV URL form — casts a YouTube video onto the 3D TV (no modal) */
+.experiment__hud-right {
+  position: absolute;
+  top: 50%;
+  right: 28px;
+  transform: translateY(-50%);
+  z-index: 4;
+  pointer-events: none;
+}
+
+.experiment__video-form {
+  pointer-events: auto;
+  width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px 16px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(10, 10, 18, 0.12);
+  border-radius: 16px;
+  box-shadow: 0 14px 40px rgba(10, 10, 18, 0.14);
+  font-family: 'JetBrains Mono', monospace;
+  color: #0a0a12;
+}
+
+.experiment__video-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(10, 10, 18, 0.7);
+}
+
+.experiment__video-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #00e5ff;
+  box-shadow: 0 0 0 3px rgba(0, 229, 255, 0.18);
+}
+
+.experiment__video-title {
+  font-weight: 700;
+  color: #0a0a12;
+}
+
+.experiment__video-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.experiment__video-field > span {
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(10, 10, 18, 0.55);
+}
+
+.experiment__video-field input {
+  padding: 9px 12px;
+  border: 1px solid rgba(10, 10, 18, 0.2);
+  border-radius: 10px;
+  font: inherit;
+  font-size: 12px;
+  background: #fff;
+  color: #0a0a12;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.experiment__video-field input::placeholder {
+  color: rgba(10, 10, 18, 0.35);
+}
+
+.experiment__video-field input:focus {
+  border-color: #0a0a12;
+  box-shadow: 0 0 0 3px rgba(0, 229, 255, 0.25);
+}
+
+.experiment__video-error {
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: #c02a3a;
+}
+
+.experiment__video-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.experiment__video-play-btn,
+.experiment__video-stop-btn {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font: inherit;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: transform 0.15s, background 0.15s, color 0.15s;
+}
+
+.experiment__video-play-btn {
+  background: #0a0a12;
+  color: #fff;
+}
+
+.experiment__video-play-btn:hover {
+  background: #1a2540;
+  transform: translateY(-1px);
+}
+
+.experiment__video-stop-btn {
+  background: #fff;
+  color: #0a0a12;
+  border-color: rgba(10, 10, 18, 0.22);
+}
+
+.experiment__video-stop-btn:hover {
+  background: #0a0a12;
+  color: #fff;
+}
+
+.experiment__video-status {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(10, 10, 18, 0.55);
+}
+
 @media (max-width: 600px) {
   .experiment__hud-top { padding: 14px 18px; }
   .experiment__hud-side { left: 14px; }
   .experiment__chip { font-size: 10px; padding: 7px 10px 7px 8px; }
   .experiment__brand { font-size: 15px; }
   .experiment__eyebrow { font-size: 9px; }
+  .experiment__hud-right {
+    right: 14px;
+    top: auto;
+    bottom: 120px;
+    transform: none;
+  }
+  .experiment__video-form { width: 240px; }
 }

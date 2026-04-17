@@ -223,31 +223,22 @@ export function makeSolarCellTexture() {
    3. EXTERIOR PARTS (chassis, walls, windows, roof accents…)
    ------------------------------------------------------------ */
 
+/** Minimal wheel: single smooth tire, silver hub, 5 bolts, dark cap.
+    No concentric rings, no spokes — clean industrial look. */
 export function DetailedWheel({ position }) {
   return (
     <group position={position}>
-      {/* Tire — one smooth body, no concentric ring bars */}
+      {/* Tire */}
       <mesh rotation={[Math.PI / 2, 0, 0]} castShadow>
         <cylinderGeometry args={[WHEEL_RADIUS, WHEEL_RADIUS, 0.38, 48]} />
-        <meshStandardMaterial color="#0a0a10" roughness={0.9} metalness={0.1} />
+        <meshStandardMaterial color="#0a0a10" roughness={0.9} metalness={0.05} />
       </mesh>
-      {/* Slightly inset sidewalls */}
-      {[-0.19, 0.19].map((z, i) => (
-        <mesh key={i} position={[0, 0, z]} rotation={[Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[0.35, WHEEL_RADIUS - 0.01, 40]} />
-          <meshStandardMaterial
-            color="#14141a"
-            roughness={1}
-            side={THREE.DoubleSide}
-          />
-        </mesh>
-      ))}
-      {/* Hub plate */}
+      {/* Hub plate (outer face) */}
       <mesh position={[0, 0, 0.2]} rotation={[Math.PI / 2, 0, 0]}>
         <cylinderGeometry args={[0.34, 0.34, 0.04, 32]} />
         <meshStandardMaterial color={COLORS.brightMetal} metalness={1} roughness={0.3} />
       </mesh>
-      {/* Bolt circle */}
+      {/* 5 lug bolts */}
       {Array.from({ length: 5 }).map((_, i) => {
         const a = (i / 5) * Math.PI * 2
         return (
@@ -266,32 +257,17 @@ export function DetailedWheel({ position }) {
         <cylinderGeometry args={[0.09, 0.09, 0.04, 24]} />
         <meshStandardMaterial color={COLORS.darkMetal} metalness={1} roughness={0.25} />
       </mesh>
-      <mesh position={[0, 0, 0.245]} rotation={[Math.PI / 2, 0, 0]}>
-        <cylinderGeometry args={[0.03, 0.03, 0.005, 16]} />
-        <meshStandardMaterial
-          color={COLORS.cyan}
-          emissive={COLORS.cyan}
-          emissiveIntensity={2.2}
-          toneMapped={false}
-        />
-      </mesh>
     </group>
   )
 }
 
+/** Clean half-torus fender arch, no inner skirt box. */
 export function Fender({ position }) {
   return (
-    <group position={position}>
-      <mesh castShadow>
-        <torusGeometry args={[WHEEL_RADIUS + 0.1, 0.09, 10, 18, Math.PI]} />
-        <meshStandardMaterial color="#12141c" roughness={0.6} metalness={0.9} />
-      </mesh>
-      {/* Inner skirt, hides wheel top */}
-      <mesh position={[0, 0.1, 0]}>
-        <boxGeometry args={[WHEEL_RADIUS * 2.1, 0.08, 0.3]} />
-        <meshStandardMaterial color="#0a0a12" roughness={0.8} />
-      </mesh>
-    </group>
+    <mesh position={position} castShadow>
+      <torusGeometry args={[WHEEL_RADIUS + 0.1, 0.09, 10, 24, Math.PI]} />
+      <meshStandardMaterial color="#12141c" roughness={0.5} metalness={0.9} />
+    </mesh>
   )
 }
 
@@ -362,46 +338,66 @@ export function Window({ width, height, thickness = 0.05, depth = 0.02, mullion 
   )
 }
 
+/** Door leaf with inset panels, window and brass handle on BOTH faces,
+    so it reads as a real door whether seen from the porch or the interior. */
 export function DoorLeaf() {
+  const glassMat = (
+    <meshPhysicalMaterial
+      color="#0a2033"
+      transmission={0.85}
+      transparent
+      opacity={0.55}
+      thickness={0.2}
+      roughness={0.05}
+      metalness={0.1}
+      ior={1.45}
+      emissive={COLORS.warm}
+      emissiveIntensity={0.5}
+      side={THREE.DoubleSide}
+    />
+  )
+  const face = (side) => {
+    // side: +1 for exterior face (+Z), -1 for interior face (-Z)
+    const z = side * 0.028
+    return (
+      <group>
+        {/* Inset panels */}
+        {[
+          [0, 0.45],
+          [0, -0.2],
+        ].map((p, i) => (
+          <mesh key={i} position={[p[0], p[1], z]}>
+            <boxGeometry args={[0.65, 0.45, 0.01]} />
+            <meshStandardMaterial color="#18100a" roughness={0.7} />
+          </mesh>
+        ))}
+        {/* Small window */}
+        <mesh position={[0, 0.7, z]}>
+          <planeGeometry args={[0.5, 0.25]} />
+          {glassMat}
+        </mesh>
+        {/* Brass handle spindle */}
+        <mesh position={[0.32, 0, side * 0.04]}>
+          <cylinderGeometry args={[0.03, 0.03, 0.14, 12]} />
+          <meshStandardMaterial color={COLORS.brass} metalness={1} roughness={0.25} />
+        </mesh>
+        <mesh position={[0.32, 0, side * 0.09]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.025, 0.025, 0.08, 12]} />
+          <meshStandardMaterial color={COLORS.brass} metalness={1} roughness={0.25} />
+        </mesh>
+      </group>
+    )
+  }
   return (
     <group>
+      {/* Wood leaf body */}
       <mesh castShadow>
         <boxGeometry args={[0.9, 2.0, 0.05]} />
         <meshStandardMaterial color={COLORS.darkWood} roughness={0.6} metalness={0.2} />
       </mesh>
-      {[
-        [0, 0.45],
-        [0, -0.2],
-      ].map((p, i) => (
-        <mesh key={i} position={[p[0], p[1], 0.028]}>
-          <boxGeometry args={[0.65, 0.45, 0.01]} />
-          <meshStandardMaterial color="#18100a" roughness={0.7} />
-        </mesh>
-      ))}
-      <mesh position={[0, 0.7, 0.028]}>
-        <planeGeometry args={[0.5, 0.25]} />
-        <meshPhysicalMaterial
-          color="#0a2033"
-          transmission={0.85}
-          transparent
-          opacity={0.55}
-          thickness={0.2}
-          roughness={0.05}
-          metalness={0.1}
-          ior={1.45}
-          emissive={COLORS.warm}
-          emissiveIntensity={0.5}
-          side={THREE.DoubleSide}
-        />
-      </mesh>
-      <mesh position={[0.32, 0, 0.04]}>
-        <cylinderGeometry args={[0.03, 0.03, 0.14, 12]} />
-        <meshStandardMaterial color={COLORS.brass} metalness={1} roughness={0.25} />
-      </mesh>
-      <mesh position={[0.32, 0, 0.09]} rotation={[Math.PI / 2, 0, 0]}>
-        <cylinderGeometry args={[0.025, 0.025, 0.08, 12]} />
-        <meshStandardMaterial color={COLORS.brass} metalness={1} roughness={0.25} />
-      </mesh>
+      {face(1)}
+      {face(-1)}
+      {/* Cyan threshold accent — visible only from the porch side */}
       <mesh position={[0, -1, 0.03]}>
         <boxGeometry args={[0.9, 0.02, 0.005]} />
         <meshStandardMaterial
@@ -986,61 +982,182 @@ export function BathroomModule() {
   )
 }
 
+/** Single-seater armchair sofa. */
 export function SofaModule() {
   return (
     <group>
-      <RoundedBox args={[2.0, 0.5, 0.8]} radius={0.06} smoothness={3} castShadow>
+      {/* Frame */}
+      <RoundedBox args={[0.9, 0.5, 0.8]} radius={0.06} smoothness={3} castShadow>
         <meshStandardMaterial color="#1a1a22" roughness={0.6} />
       </RoundedBox>
-      {[-0.65, 0, 0.65].map((x, i) => (
+      {/* Seat cushion */}
+      <RoundedBox
+        args={[0.72, 0.18, 0.7]}
+        radius={0.05}
+        smoothness={3}
+        position={[0, 0.3, 0.02]}
+      >
+        <meshStandardMaterial color="#3a4258" roughness={0.85} />
+      </RoundedBox>
+      {/* Back cushion */}
+      <RoundedBox
+        args={[0.7, 0.4, 0.18]}
+        radius={0.04}
+        smoothness={3}
+        position={[0, 0.52, -0.28]}
+      >
+        <meshStandardMaterial color="#2b3244" roughness={0.9} />
+      </RoundedBox>
+      {/* Armrests */}
+      {[-0.36, 0.36].map((x, i) => (
         <RoundedBox
           key={i}
-          args={[0.6, 0.18, 0.7]}
-          radius={0.05}
+          args={[0.14, 0.32, 0.75]}
+          radius={0.03}
           smoothness={3}
-          position={[x, 0.3, 0.02]}
-        >
-          <meshStandardMaterial color="#3a4258" roughness={0.85} />
-        </RoundedBox>
-      ))}
-      {[-0.65, 0, 0.65].map((x, i) => (
-        <RoundedBox
-          key={`b-${i}`}
-          args={[0.56, 0.35, 0.18]}
-          radius={0.04}
-          smoothness={3}
-          position={[x, 0.5, -0.28]}
+          position={[x, 0.37, 0]}
         >
           <meshStandardMaterial color="#2b3244" roughness={0.9} />
         </RoundedBox>
       ))}
+      {/* Throw pillow */}
       <RoundedBox
-        args={[0.3, 0.1, 0.3]}
+        args={[0.26, 0.08, 0.26]}
         radius={0.04}
         smoothness={3}
-        position={[0.75, 0.42, -0.05]}
+        position={[0.18, 0.42, 0]}
       >
         <meshStandardMaterial color="#c98b4a" roughness={0.9} />
       </RoundedBox>
+      {/* Metal legs */}
       {[
-        [-0.9, -0.27, 0.3],
-        [0.9, -0.27, 0.3],
-        [-0.9, -0.27, -0.3],
-        [0.9, -0.27, -0.3],
+        [-0.35, -0.27, 0.3],
+        [0.35, -0.27, 0.3],
+        [-0.35, -0.27, -0.3],
+        [0.35, -0.27, -0.3],
       ].map((p, i) => (
         <mesh key={i} position={p}>
           <boxGeometry args={[0.06, 0.12, 0.06]} />
           <meshStandardMaterial color={COLORS.brightMetal} metalness={1} roughness={0.3} />
         </mesh>
       ))}
+      {/* Under glow */}
       <mesh position={[0, -0.27, 0]}>
-        <boxGeometry args={[1.8, 0.01, 0.6]} />
+        <boxGeometry args={[0.78, 0.01, 0.6]} />
         <meshStandardMaterial
           color={COLORS.violet}
           emissive={COLORS.violet}
           emissiveIntensity={1.4}
           toneMapped={false}
         />
+      </mesh>
+    </group>
+  )
+}
+
+/** Wall-mounted flat-screen TV. Default orientation has the screen
+    pointing in +Z — rotate the placement group to aim it into the room. */
+export function TVModule() {
+  return (
+    <group>
+      {/* Wall bracket / back plate */}
+      <mesh position={[0, 0, -0.035]} castShadow>
+        <boxGeometry args={[1.18, 0.68, 0.04]} />
+        <meshStandardMaterial color="#0a0a0f" roughness={0.5} metalness={0.3} />
+      </mesh>
+      {/* Bezel */}
+      <mesh position={[0, 0, -0.008]}>
+        <boxGeometry args={[1.22, 0.72, 0.02]} />
+        <meshStandardMaterial color="#05050a" roughness={0.3} metalness={0.6} />
+      </mesh>
+      {/* Emissive screen */}
+      <mesh position={[0, 0, 0.004]}>
+        <planeGeometry args={[1.14, 0.64]} />
+        <meshStandardMaterial
+          color="#0a1a2e"
+          emissive="#2a64a8"
+          emissiveIntensity={1.1}
+          toneMapped={false}
+        />
+      </mesh>
+      {/* Subtle horizontal light bar to suggest "live content" */}
+      <mesh position={[0, -0.1, 0.005]}>
+        <planeGeometry args={[1.14, 0.08]} />
+        <meshStandardMaterial
+          color={COLORS.cyan}
+          emissive={COLORS.cyan}
+          emissiveIntensity={1.5}
+          transparent
+          opacity={0.25}
+          toneMapped={false}
+        />
+      </mesh>
+      {/* Standby LED */}
+      <mesh position={[0.5, -0.3, 0.012]}>
+        <sphereGeometry args={[0.012, 10, 10]} />
+        <meshStandardMaterial
+          color={COLORS.cyan}
+          emissive={COLORS.cyan}
+          emissiveIntensity={3}
+          toneMapped={false}
+        />
+      </mesh>
+      {/* Brand strip */}
+      <mesh position={[0, -0.34, 0.012]}>
+        <boxGeometry args={[0.12, 0.01, 0.005]} />
+        <meshStandardMaterial
+          color={COLORS.brightMetal}
+          metalness={1}
+          roughness={0.3}
+        />
+      </mesh>
+    </group>
+  )
+}
+
+/** Low coffee/side table with a small warm lamp on top. */
+export function CoffeeTable() {
+  return (
+    <group>
+      {/* Table top */}
+      <mesh position={[0, 0.36, 0]} castShadow>
+        <boxGeometry args={[0.55, 0.04, 0.55]} />
+        <meshStandardMaterial color={COLORS.darkWood} roughness={0.55} />
+      </mesh>
+      {/* Metal legs */}
+      {[
+        [-0.22, 0.17, -0.22],
+        [0.22, 0.17, -0.22],
+        [-0.22, 0.17, 0.22],
+        [0.22, 0.17, 0.22],
+      ].map((p, i) => (
+        <mesh key={i} position={p} castShadow>
+          <cylinderGeometry args={[0.022, 0.022, 0.34, 10]} />
+          <meshStandardMaterial color={COLORS.darkMetal} metalness={0.9} roughness={0.3} />
+        </mesh>
+      ))}
+      {/* Table lamp — ceramic base + warm bulb */}
+      <mesh position={[0.12, 0.42, 0.1]} castShadow>
+        <cylinderGeometry args={[0.06, 0.045, 0.1, 14]} />
+        <meshStandardMaterial color="#f0e4d0" roughness={0.8} />
+      </mesh>
+      <mesh position={[0.12, 0.49, 0.1]}>
+        <sphereGeometry args={[0.028, 12, 12]} />
+        <meshStandardMaterial
+          color={COLORS.warm}
+          emissive={COLORS.warm}
+          emissiveIntensity={2.8}
+          toneMapped={false}
+        />
+      </mesh>
+      {/* A small stacked book on the other side */}
+      <mesh position={[-0.12, 0.395, -0.05]} rotation={[0, 0.3, 0]}>
+        <boxGeometry args={[0.2, 0.03, 0.14]} />
+        <meshStandardMaterial color="#3a5a7a" roughness={0.9} />
+      </mesh>
+      <mesh position={[-0.12, 0.42, -0.05]} rotation={[0, 0.1, 0]}>
+        <boxGeometry args={[0.18, 0.025, 0.13]} />
+        <meshStandardMaterial color="#8a1a28" roughness={0.9} />
       </mesh>
     </group>
   )
@@ -1153,25 +1270,68 @@ export function WaterTank() {
   )
 }
 
-export function LoftLadder() {
+/** Loft ladder. Rails stand vertically separated along Z (so the climber
+    faces +X to go up); rungs span Z between them. Bottom at y=0, top at y=`height`. */
+export function LoftLadder({ height = 1.5 }) {
+  const rungSpacing = 0.3
+  const rungCount = Math.max(3, Math.floor((height - 0.2) / rungSpacing))
   return (
     <group>
-      {[-0.2, 0.2].map((x, i) => (
-        <mesh key={i} position={[x, 0, 0]} castShadow>
-          <boxGeometry args={[0.04, 2.2, 0.04]} />
+      {/* 2 side rails separated along Z */}
+      {[-0.2, 0.2].map((z, i) => (
+        <mesh key={i} position={[0, height / 2, z]} castShadow>
+          <boxGeometry args={[0.04, height, 0.04]} />
           <meshStandardMaterial color={COLORS.darkWood} roughness={0.6} />
         </mesh>
       ))}
-      {Array.from({ length: 7 }).map((_, i) => (
+      {/* Rungs — cylinders rotated so their length runs along Z */}
+      {Array.from({ length: rungCount }).map((_, i) => (
         <mesh
           key={i}
-          position={[0, -1.0 + i * 0.3, 0]}
-          rotation={[0, 0, Math.PI / 2]}
+          position={[0, 0.2 + i * rungSpacing, 0]}
+          rotation={[Math.PI / 2, 0, 0]}
         >
-          <cylinderGeometry args={[0.02, 0.02, 0.5, 10]} />
+          <cylinderGeometry args={[0.02, 0.02, 0.5, 12]} />
           <meshStandardMaterial color={COLORS.brightMetal} metalness={1} roughness={0.35} />
         </mesh>
       ))}
+    </group>
+  )
+}
+
+/** Small red dog pouf — a raised bolster around a darker inner cushion. */
+export function DogBed() {
+  return (
+    <group>
+      {/* Outer bolster ring (plush red) */}
+      <RoundedBox args={[0.95, 0.14, 0.72]} radius={0.12} smoothness={3} castShadow>
+        <meshStandardMaterial color="#8a1a28" roughness={0.95} />
+      </RoundedBox>
+      {/* Inner cushion (softer red, slightly sunken) */}
+      <RoundedBox
+        args={[0.78, 0.1, 0.56]}
+        radius={0.08}
+        smoothness={3}
+        position={[0, 0.06, 0]}
+      >
+        <meshStandardMaterial color="#c44560" roughness={0.98} />
+      </RoundedBox>
+      {/* Tiny paw-print embossed mark */}
+      {[
+        [-0.08, 0.13, -0.05],
+        [0.08, 0.13, -0.05],
+        [-0.06, 0.13, 0.06],
+        [0.06, 0.13, 0.06],
+      ].map((p, i) => (
+        <mesh key={i} position={p}>
+          <sphereGeometry args={[0.018, 10, 10]} />
+          <meshStandardMaterial color="#f0c0c9" roughness={0.95} />
+        </mesh>
+      ))}
+      <mesh position={[0, 0.13, 0.01]}>
+        <sphereGeometry args={[0.03, 10, 10]} />
+        <meshStandardMaterial color="#f0c0c9" roughness={0.95} />
+      </mesh>
     </group>
   )
 }
