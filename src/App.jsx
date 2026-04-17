@@ -90,7 +90,7 @@ export default function App() {
       <div className={`loader ${loaded ? 'is-done' : ''}`}>
         <div className="loader__logo">KENOLU</div>
         <div className="loader__bar" />
-        <div className="loader__text">Calibration des systèmes…</div>
+        <div className="loader__text">Calibrating systems…</div>
       </div>
 
       <ScrollProgress />

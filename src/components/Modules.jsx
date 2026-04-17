@@ -3,50 +3,50 @@ import Reveal from './Reveal'
 const modules = [
   {
     tag: 'MODULE 01',
-    title: 'Salon / bureau',
+    title: 'Living / desk',
     area: '7 m²',
-    desc: "Un canapé-convertible en L, table rabattable, parois vitrées sol-plafond. Le module s'ouvre sur l'extérieur via une baie coulissante de 2,2 m.",
+    desc: "An L-shaped convertible sofa, a fold-down table, floor-to-ceiling glass. The module opens onto the outside via a 2.2 m sliding bay window.",
     items: [
-      'Canapé modulaire 2 places',
-      'Baie vitrée triple-vitrage 2,2 m',
-      'Banquette-rangement intégrée',
-      'Station de travail pivotante',
+      '2-seater modular sofa',
+      '2.2 m triple-glazed bay window',
+      'Built-in storage bench',
+      'Pivoting workstation',
     ],
   },
   {
     tag: 'MODULE 02',
-    title: 'Cuisine compacte',
+    title: 'Compact kitchen',
     area: '4 m²',
-    desc: "Plan de travail en inox brossé, plaque induction 2 feux alimentée par la batterie, évier mono-cuve et réfrigérateur 12V ultra-basse conso.",
+    desc: "Brushed-stainless worktop, 2-burner induction hob powered by the battery, single-bowl sink and an ultra-low-consumption 12V fridge.",
     items: [
-      'Plaque induction 2 zones',
-      'Réfrigérateur 12V 90 L',
-      'Hotte recyclage silencieuse',
-      'Rangements magnétiques',
+      '2-zone induction hob',
+      '90 L · 12V fridge',
+      'Silent recirculating hood',
+      'Magnetic storage rails',
     ],
   },
   {
     tag: 'MODULE 03',
-    title: 'Couchage en mezzanine',
+    title: 'Mezzanine bed',
     area: '6 m²',
-    desc: "Plateforme suspendue accessible par échelle en acier noir. Matelas queen-size, velux panoramique sur le ciel, rangements muraux en bois noirci.",
+    desc: "Suspended platform reached by a black-steel ladder. Queen-size mattress, panoramic roof skylight and blackened-wood wall storage.",
     items: [
-      'Lit queen 160 × 200',
-      'Velux électrique sur toit',
-      'Éclairage indirect LED 2700K',
-      'Penderie escamotable',
+      'Queen bed · 160 × 200',
+      'Electric rooftop skylight',
+      'Indirect 2700K LED lighting',
+      'Retractable wardrobe',
     ],
   },
   {
     tag: 'MODULE 04',
-    title: 'Salle d’eau',
+    title: 'Bathroom',
     area: '3 m²',
-    desc: "Douche à l'italienne avec paroi verre, toilettes sèches sans eau, lavabo céramique noir. Ventilation à récupération de chaleur.",
+    desc: "Walk-in shower with a glass panel, waterless dry toilet, black ceramic basin. Heat-recovery ventilation keeps everything dry and warm.",
     items: [
-      'Douche italienne 90 × 90',
-      'Toilettes sèches (zéro eau)',
-      'VMC double-flux',
-      'Chauffe-eau solaire 80 L',
+      '90 × 90 walk-in shower',
+      'Dry toilet (zero water)',
+      'Dual-flow heat-recovery vent',
+      '80 L solar water heater',
     ],
   },
 ]
@@ -56,19 +56,20 @@ export default function Modules() {
     <section id="modules" className="section">
       <div className="container">
         <Reveal className="section__eyebrow">
-          <span>— MODULES DE VIE</span>
+          <span>— LIVING MODULES</span>
         </Reveal>
 
         <Reveal as="h2" className="section__title">
-          Quatre modules.<br />
-          <em>Une vie entière.</em>
+          Four modules.<br />
+          <em>A whole life.</em>
         </Reveal>
 
         <Reveal className="section__kicker">
           <p>
-            Chaque mètre carré a été étudié pour remplir plusieurs fonctions.
-            L’espace se réorganise selon l’heure : bureau le matin, salon le soir,
-            chambre la nuit. Même la salle d’eau disparaît derrière un panneau pivotant.
+            Every square metre pulls multiple duties. The space reshuffles
+            with the hour — desk in the morning, living room at night,
+            bedroom later. Even the bathroom disappears behind a pivoting
+            panel.
           </p>
         </Reveal>
 

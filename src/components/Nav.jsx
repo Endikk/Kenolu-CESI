@@ -11,11 +11,11 @@ export default function Nav() {
         <a href="#plan">plan</a>
         <a href="#modules">modules</a>
         <a href="#offgrid">off-grid</a>
-        <a href="#advantages">avantages</a>
-        <a href="#cost">coût</a>
-        <a href="/experimentation">vue 3D</a>
+        <a href="#advantages">advantages</a>
+        <a href="#cost">cost</a>
+        <a href="/experimentation">3D view</a>
       </div>
-      <a href="#cta" className="nav__cta">Réserver une démo</a>
+      <a href="#cta" className="nav__cta">Book a demo</a>
     </nav>
   )
 }

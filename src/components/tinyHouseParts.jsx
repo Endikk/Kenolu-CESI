@@ -1,6 +1,6 @@
 import { useFrame } from '@react-three/fiber'
 import { Edges, RoundedBox } from '@react-three/drei'
-import { useMemo, useRef } from 'react'
+import { forwardRef, useMemo, useRef } from 'react'
 import * as THREE from 'three'
 
 /* ============================================================
@@ -175,6 +175,31 @@ export function makeGrassTexture() {
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping
   tex.repeat.set(8, 8)
   tex.anisotropy = 4
+  return tex
+}
+
+/** Small checker (white / black) pattern for the human's scarf. */
+export function makeCheckerTexture() {
+  const canvas = document.createElement('canvas')
+  canvas.width = 128
+  canvas.height = 128
+  const ctx = canvas.getContext('2d')
+  ctx.fillStyle = '#f6f2ea'
+  ctx.fillRect(0, 0, 128, 128)
+  ctx.fillStyle = '#0a0a0f'
+  const size = 16
+  for (let x = 0; x < 128; x += size) {
+    for (let y = 0; y < 128; y += size) {
+      if (((x / size) | 0) + ((y / size) | 0) & 1) {
+        ctx.fillRect(x, y, size, size)
+      }
+    }
+  }
+  const tex = new THREE.CanvasTexture(canvas)
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping
+  tex.repeat.set(4, 2)
+  tex.anisotropy = 4
+  tex.colorSpace = THREE.SRGBColorSpace
   return tex
 }
 
@@ -412,18 +437,36 @@ export function DoorLeaf() {
 }
 
 export function Porch() {
+  // Foldable mini-staircase parameters. Deck top is at local y=0; the
+  // ground is ~1.32 m below. 4 treads × 0.33 m rise / 0.22 m run reach
+  // the ground while staying compact enough to read as a foldable step.
+  const stairRise = 0.33
+  const stairRun = 0.22
+  const stairSteps = 4
+  const stairAngle = Math.atan2(stairRun, stairRise)
+  const stairLen =
+    Math.sqrt(
+      (stairRise * stairSteps) ** 2 + (stairRun * stairSteps) ** 2
+    ) + 0.04
   return (
     <group>
+      {/* Deck slab */}
       <mesh position={[0, -0.05, 0]} castShadow receiveShadow>
         <boxGeometry args={[1.8, 0.1, 1.3]} />
-        <meshStandardMaterial color={COLORS.darkWood} roughness={0.8} metalness={0.1} />
+        <meshStandardMaterial
+          color={COLORS.darkWood}
+          roughness={0.8}
+          metalness={0.1}
+        />
       </mesh>
+      {/* Plank grooves */}
       {Array.from({ length: 6 }).map((_, i) => (
         <mesh key={i} position={[0, 0.001, -0.55 + i * 0.22]}>
           <boxGeometry args={[1.75, 0.005, 0.005]} />
           <meshStandardMaterial color="#05030a" />
         </mesh>
       ))}
+      {/* Corner support posts */}
       {[
         [-0.85, -0.4, -0.6],
         [0.85, -0.4, -0.6],
@@ -435,16 +478,45 @@ export function Porch() {
           <meshStandardMaterial color="#12141c" metalness={0.9} roughness={0.4} />
         </mesh>
       ))}
-      <mesh position={[0, 0.45, 0.6]}>
-        <boxGeometry args={[1.7, 0.04, 0.04]} />
-        <meshStandardMaterial color={COLORS.darkMetal} metalness={0.8} roughness={0.35} />
-      </mesh>
-      {Array.from({ length: 9 }).map((_, i) => (
-        <mesh key={i} position={[-0.8 + i * 0.2, 0.2, 0.6]} castShadow>
-          <boxGeometry args={[0.02, 0.5, 0.02]} />
-          <meshStandardMaterial color={COLORS.darkMetal} metalness={0.8} roughness={0.35} />
-        </mesh>
+
+      {/* ── Side railings on the two LONG edges (x = ±0.9) ───────
+          The house wall sits on +Z (local z=+0.65) so that side is left
+          open for the door. The outer edge (-Z) is left open for the
+          staircase. Only the two lateral edges carry railings. */}
+      {[-0.9, 0.9].map((x, side) => (
+        <group key={side}>
+          <mesh position={[x, 0.45, 0]}>
+            <boxGeometry args={[0.04, 0.04, 1.2]} />
+            <meshStandardMaterial
+              color={COLORS.darkMetal}
+              metalness={0.8}
+              roughness={0.35}
+            />
+          </mesh>
+          {[-0.5, -0.3, -0.1, 0.1, 0.3, 0.5].map((z, j) => (
+            <mesh key={j} position={[x, 0.2, z]} castShadow>
+              <boxGeometry args={[0.02, 0.5, 0.02]} />
+              <meshStandardMaterial
+                color={COLORS.darkMetal}
+                metalness={0.8}
+                roughness={0.35}
+              />
+            </mesh>
+          ))}
+          {[-0.58, 0.58].map((z, j) => (
+            <mesh key={`cap-${j}`} position={[x, 0.48, z]}>
+              <boxGeometry args={[0.06, 0.04, 0.06]} />
+              <meshStandardMaterial
+                color={COLORS.darkMetal}
+                metalness={0.9}
+                roughness={0.3}
+              />
+            </mesh>
+          ))}
+        </group>
       ))}
+
+      {/* Neon under-deck glow */}
       <mesh position={[0, -0.12, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[1.7, 1.2]} />
         <meshBasicMaterial
@@ -455,36 +527,107 @@ export function Porch() {
           side={THREE.DoubleSide}
         />
       </mesh>
-      {[0, 1, 2].map((i) => (
-        <mesh
-          key={i}
-          position={[0, -0.15 - i * 0.16, 0.75 + i * 0.24]}
-          castShadow
-          receiveShadow
-        >
-          <boxGeometry args={[1.2, 0.12, 0.26]} />
-          <meshStandardMaterial color={COLORS.darkWood} roughness={0.8} />
+
+      {/* ── Foldable mini-staircase ────────────────────────────
+          Anchored at the OUTER edge (local z = -0.65), descending in
+          -Z and -Y. Hinge pin across the deck edge (so it reads as a
+          ladder that could fold up), 2 steel stringers, 4 wood treads. */}
+      <group position={[0, 0, -0.65]}>
+        {/* Hinge pin along the deck edge */}
+        <mesh position={[0, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.022, 0.022, 0.6, 14]} />
+          <meshStandardMaterial
+            color={COLORS.brightMetal}
+            metalness={1}
+            roughness={0.3}
+          />
         </mesh>
-      ))}
+        {/* 2 diagonal steel stringers running the full length */}
+        {[-0.27, 0.27].map((x, i) => (
+          <mesh
+            key={i}
+            position={[
+              x,
+              -(stairRise * stairSteps) / 2,
+              -(stairRun * stairSteps) / 2,
+            ]}
+            rotation={[stairAngle, 0, 0]}
+            castShadow
+          >
+            <boxGeometry args={[0.035, stairLen, 0.03]} />
+            <meshStandardMaterial
+              color={COLORS.darkMetal}
+              metalness={0.9}
+              roughness={0.4}
+            />
+          </mesh>
+        ))}
+        {/* Wooden treads */}
+        {Array.from({ length: stairSteps }).map((_, i) => {
+          const y = -stairRise * (i + 0.5)
+          const z = -stairRun * (i + 0.5)
+          return (
+            <mesh key={i} position={[0, y, z]} castShadow receiveShadow>
+              <boxGeometry args={[0.52, 0.035, 0.2]} />
+              <meshStandardMaterial color={COLORS.darkWood} roughness={0.8} />
+            </mesh>
+          )
+        })}
+        {/* Cyan LED along the bottom tread's leading edge */}
+        <mesh
+          position={[
+            0,
+            -stairRise * (stairSteps - 0.5),
+            -stairRun * (stairSteps - 0.5) - 0.095,
+          ]}
+        >
+          <boxGeometry args={[0.5, 0.006, 0.008]} />
+          <meshStandardMaterial
+            color={COLORS.cyan}
+            emissive={COLORS.cyan}
+            emissiveIntensity={1.4}
+            toneMapped={false}
+          />
+        </mesh>
+      </group>
     </group>
   )
 }
 
+/** Door overhang. The group's origin is where the awning meets the wall;
+    the slab tilts forward-down and the brackets anchor back to the wall. */
 export function Awning() {
+  const width = 1.25
+  const depth = 0.55
   return (
     <group>
-      <mesh castShadow rotation={[-0.25, 0, 0]}>
-        <boxGeometry args={[1.8, 0.06, 0.9]} />
+      {/* Tilted slab — leading edge drops 10 cm so rain runs off */}
+      <mesh
+        position={[0, 0.02, -depth / 2]}
+        rotation={[-0.15, 0, 0]}
+        castShadow
+      >
+        <boxGeometry args={[width, 0.05, depth]} />
         <meshStandardMaterial color="#0c0c14" metalness={0.7} roughness={0.5} />
       </mesh>
-      {[-0.8, 0.8].map((x, i) => (
-        <mesh key={i} position={[x, -0.2, 0.4]} rotation={[0.4, 0, 0]}>
-          <cylinderGeometry args={[0.02, 0.02, 0.6, 8]} />
-          <meshStandardMaterial color="#2a2d35" metalness={1} />
+      {/* 2 diagonal brackets from wall to slab underside */}
+      {[-(width / 2) + 0.08, width / 2 - 0.08].map((x, i) => (
+        <mesh
+          key={i}
+          position={[x, -0.13, -0.2]}
+          rotation={[0.55, 0, 0]}
+          castShadow
+        >
+          <cylinderGeometry args={[0.018, 0.018, 0.42, 10]} />
+          <meshStandardMaterial color="#2a2d35" metalness={1} roughness={0.35} />
         </mesh>
       ))}
-      <mesh position={[0, -0.04, 0.42]} rotation={[-0.25, 0, 0]}>
-        <boxGeometry args={[1.75, 0.012, 0.01]} />
+      {/* Cyan LED strip along the front edge */}
+      <mesh
+        position={[0, 0.008, -depth + 0.015]}
+        rotation={[-0.15, 0, 0]}
+      >
+        <boxGeometry args={[width - 0.08, 0.012, 0.008]} />
         <meshStandardMaterial
           color={COLORS.cyan}
           emissive={COLORS.cyan}
@@ -701,15 +844,18 @@ export function StringLight({ length = 7, above = 0.2 }) {
 /** Wall built from `THREE.ExtrudeGeometry` so window/door holes are true
     see-through openings — not just planes stuck on a solid box.
     `holes` is an array of { shape: 'rect'|'circle', cx, cy, w, h } | { …, r }. */
-export function CutoutWall({
-  width,
-  height,
-  thickness,
-  holes = [],
-  map,
-  color = '#ffffff',
-  roughness = 0.75,
-}) {
+export const CutoutWall = forwardRef(function CutoutWall(
+  {
+    width,
+    height,
+    thickness,
+    holes = [],
+    map,
+    color = '#ffffff',
+    roughness = 0.75,
+  },
+  ref
+) {
   const geometry = useMemo(() => {
     const shape = new THREE.Shape()
     shape.moveTo(-width / 2, -height / 2)
@@ -768,11 +914,11 @@ export function CutoutWall({
   }, [width, height, thickness, JSON.stringify(holes)])
 
   return (
-    <mesh geometry={geometry} castShadow receiveShadow>
+    <mesh ref={ref} geometry={geometry} castShadow receiveShadow>
       <meshStandardMaterial map={map} color={color} roughness={roughness} />
     </mesh>
   )
-}
+})
 
 /** Triangular gable panel to cap a short-end wall under the pitched roof. */
 export function GableTriangle({ material }) {
@@ -1055,9 +1201,10 @@ export function SofaModule() {
   )
 }
 
-/** Wall-mounted flat-screen TV. Default orientation has the screen
-    pointing in +Z — rotate the placement group to aim it into the room. */
-export function TVModule() {
+/** Wall-mounted flat-screen TV. When `screenOff` is true the emissive
+    demo content is hidden so a YouTube iframe can cover the plane
+    without the blue glow bleeding through. */
+export function TVModule({ screenOff = false }) {
   return (
     <group>
       {/* Wall bracket / back plate */}
@@ -1070,29 +1217,31 @@ export function TVModule() {
         <boxGeometry args={[1.22, 0.72, 0.02]} />
         <meshStandardMaterial color="#05050a" roughness={0.3} metalness={0.6} />
       </mesh>
-      {/* Emissive screen */}
+      {/* Screen — emissive when idle, plain black when a video streams */}
       <mesh position={[0, 0, 0.004]}>
         <planeGeometry args={[1.14, 0.64]} />
         <meshStandardMaterial
-          color="#0a1a2e"
-          emissive="#2a64a8"
-          emissiveIntensity={1.1}
+          color={screenOff ? '#000' : '#0a1a2e'}
+          emissive={screenOff ? '#000' : '#2a64a8'}
+          emissiveIntensity={screenOff ? 0 : 1.1}
           toneMapped={false}
         />
       </mesh>
-      {/* Subtle horizontal light bar to suggest "live content" */}
-      <mesh position={[0, -0.1, 0.005]}>
-        <planeGeometry args={[1.14, 0.08]} />
-        <meshStandardMaterial
-          color={COLORS.cyan}
-          emissive={COLORS.cyan}
-          emissiveIntensity={1.5}
-          transparent
-          opacity={0.25}
-          toneMapped={false}
-        />
-      </mesh>
-      {/* Standby LED */}
+      {/* Live-content light bar, hidden when a video is playing */}
+      {!screenOff && (
+        <mesh position={[0, -0.1, 0.005]}>
+          <planeGeometry args={[1.14, 0.08]} />
+          <meshStandardMaterial
+            color={COLORS.cyan}
+            emissive={COLORS.cyan}
+            emissiveIntensity={1.5}
+            transparent
+            opacity={0.25}
+            toneMapped={false}
+          />
+        </mesh>
+      )}
+      {/* Standby LED (always on) */}
       <mesh position={[0.5, -0.3, 0.012]}>
         <sphereGeometry args={[0.012, 10, 10]} />
         <meshStandardMaterial
@@ -1460,6 +1609,279 @@ export function Birds() {
           </mesh>
         </group>
       ))}
+    </group>
+  )
+}
+
+/** Waving human companion. Feet touch y=0 of the group, so place at
+    `position=[x, GROUND_Y, z]`. Builds the requested traits:
+    pale skin, thin grey semi-long hair, white beard, black/white
+    checkered scarf, slightly-round dark glasses, right hand waving
+    in the air. Call once per scene — the scarf texture is cached. */
+export function Human({ position = [0, 0, 0], facing = 0 }) {
+  const arm = useRef()
+
+  useFrame((state) => {
+    if (!arm.current) return
+    const t = state.clock.elapsedTime
+    // Arm is modelled straight up — this rotation waves it side-to-side
+    // around the shoulder (base tilt 0.2 rad outward ± 0.3 rad swing).
+    arm.current.rotation.z = 0.2 + Math.sin(t * 3.5) * 0.3
+  })
+
+  const scarfTex = useMemo(() => makeCheckerTexture(), [])
+
+  // Palette
+  const skin = '#f4d2b3'
+  const hair = '#a6a8ac'
+  const beardWhite = '#f2eee5'
+  const shirt = '#455772'
+  const pants = '#1a2038'
+  const shoes = '#14141a'
+  const frame = '#1a1c22'
+
+  // Y landmarks (relative to feet at y=0). Total height ≈ 1.77 m.
+  const Y_SHOULDER = 1.42
+  const Y_NECK = 1.52
+  const Y_HEAD = 1.64
+
+  return (
+    <group position={position} rotation={[0, facing, 0]}>
+      {/* Shoes */}
+      {[-0.1, 0.1].map((x, i) => (
+        <mesh key={i} position={[x, 0.04, 0.05]} castShadow>
+          <boxGeometry args={[0.13, 0.08, 0.28]} />
+          <meshStandardMaterial color={shoes} roughness={0.6} />
+        </mesh>
+      ))}
+      {/* Legs (dark trousers) */}
+      {[-0.1, 0.1].map((x, i) => (
+        <mesh key={i} position={[x, 0.48, 0]} castShadow>
+          <cylinderGeometry args={[0.085, 0.07, 0.78, 16]} />
+          <meshStandardMaterial color={pants} roughness={0.85} />
+        </mesh>
+      ))}
+
+      {/* Slim torso */}
+      <RoundedBox
+        args={[0.42, 0.58, 0.26]}
+        radius={0.08}
+        smoothness={3}
+        position={[0, 1.18, 0]}
+        castShadow
+      >
+        <meshStandardMaterial color={shirt} roughness={0.85} />
+      </RoundedBox>
+
+      {/* Neck */}
+      <mesh position={[0, Y_NECK, 0]} castShadow>
+        <cylinderGeometry args={[0.055, 0.07, 0.12, 16]} />
+        <meshStandardMaterial color={skin} roughness={0.85} />
+      </mesh>
+
+      {/* Head */}
+      <mesh position={[0, Y_HEAD, 0]} castShadow>
+        <sphereGeometry args={[0.135, 24, 24]} />
+        <meshStandardMaterial color={skin} roughness={0.85} />
+      </mesh>
+      {/* Ears */}
+      {[-0.128, 0.128].map((x, i) => (
+        <mesh key={i} position={[x, Y_HEAD, 0]} castShadow>
+          <sphereGeometry args={[0.022, 12, 12]} />
+          <meshStandardMaterial color={skin} roughness={0.9} />
+        </mesh>
+      ))}
+      {/* Small nose so the face has a clear forward direction */}
+      <mesh position={[0, Y_HEAD - 0.005, 0.132]} castShadow>
+        <sphereGeometry args={[0.022, 12, 12]} />
+        <meshStandardMaterial color={skin} roughness={0.85} />
+      </mesh>
+
+      {/* Hair cap — single continuous piece covering top and back of the
+          head. Fine, swept down, no separate fringe bump. */}
+      <mesh position={[0, Y_HEAD + 0.012, -0.008]} scale={[1.04, 1.05, 1.04]}>
+        <sphereGeometry
+          args={[0.135, 24, 24, 0, Math.PI * 2, 0, Math.PI * 0.58]}
+        />
+        <meshStandardMaterial color={hair} roughness={0.98} />
+      </mesh>
+      {/* Soft swept fringe tilted back over the forehead */}
+      <mesh
+        position={[0, Y_HEAD + 0.08, 0.06]}
+        rotation={[-0.32, 0, 0]}
+        castShadow
+      >
+        <boxGeometry args={[0.2, 0.035, 0.12]} />
+        <meshStandardMaterial color={hair} roughness={0.98} />
+      </mesh>
+      {/* Two side strands falling toward the shoulders */}
+      {[-1, 1].map((sign, i) => (
+        <mesh
+          key={i}
+          position={[0.12 * sign, Y_HEAD - 0.1, -0.01]}
+          rotation={[0, 0, sign * 0.1]}
+          castShadow
+        >
+          <cylinderGeometry args={[0.03, 0.02, 0.22, 10]} />
+          <meshStandardMaterial color={hair} roughness={0.98} />
+        </mesh>
+      ))}
+
+      {/* Scarf — donut-shaped ring of checkered fabric around the neck,
+          plus two cloth tails hanging over the chest. */}
+      <mesh
+        position={[0, Y_NECK + 0.02, 0]}
+        rotation={[Math.PI / 2, 0, 0]}
+        castShadow
+      >
+        <torusGeometry args={[0.115, 0.058, 14, 32]} />
+        <meshStandardMaterial map={scarfTex} color="#ffffff" roughness={0.95} />
+      </mesh>
+      <mesh
+        position={[0.05, Y_NECK - 0.17, 0.14]}
+        rotation={[0.2, 0, 0.1]}
+        castShadow
+      >
+        <boxGeometry args={[0.12, 0.3, 0.035]} />
+        <meshStandardMaterial map={scarfTex} color="#ffffff" roughness={0.95} />
+      </mesh>
+      <mesh
+        position={[-0.045, Y_NECK - 0.21, 0.145]}
+        rotation={[0.28, 0, -0.08]}
+        castShadow
+      >
+        <boxGeometry args={[0.1, 0.24, 0.03]} />
+        <meshStandardMaterial map={scarfTex} color="#ffffff" roughness={0.95} />
+      </mesh>
+
+      {/* Glasses — slightly rounded but noticeably wider than tall, not
+          perfect circles. Each lens is a torus scaled into an oval. */}
+      {[-0.055, 0.055].map((x, i) => (
+        <group key={i} position={[x, Y_HEAD + 0.01, 0.12]}>
+          <mesh scale={[1.2, 0.85, 1]}>
+            <torusGeometry args={[0.04, 0.008, 12, 32]} />
+            <meshStandardMaterial
+              color={frame}
+              metalness={0.7}
+              roughness={0.25}
+            />
+          </mesh>
+          <mesh scale={[1.2, 0.85, 1]}>
+            <circleGeometry args={[0.04, 24]} />
+            <meshPhysicalMaterial
+              color="#0b1422"
+              transmission={0.35}
+              transparent
+              opacity={0.75}
+              thickness={0.05}
+              roughness={0.1}
+              side={THREE.DoubleSide}
+            />
+          </mesh>
+        </group>
+      ))}
+      {/* Bridge */}
+      <mesh position={[0, Y_HEAD + 0.01, 0.12]}>
+        <boxGeometry args={[0.03, 0.006, 0.006]} />
+        <meshStandardMaterial color={frame} metalness={0.7} roughness={0.3} />
+      </mesh>
+      {/* Temple arms running back to the ears */}
+      {[-0.098, 0.098].map((x, i) => (
+        <mesh key={i} position={[x, Y_HEAD + 0.01, 0.04]}>
+          <boxGeometry args={[0.005, 0.006, 0.16]} />
+          <meshStandardMaterial color={frame} metalness={0.7} roughness={0.3} />
+        </mesh>
+      ))}
+
+      {/* Small white beard on the chin only (doesn't cover the mouth) */}
+      <mesh position={[0, Y_HEAD - 0.09, 0.06]} scale={[1.05, 0.8, 0.9]}>
+        <sphereGeometry args={[0.085, 18, 18]} />
+        <meshStandardMaterial color={beardWhite} roughness={0.98} />
+      </mesh>
+      {/* Light side-whiskers along the jawline */}
+      {[-1, 1].map((sign, i) => (
+        <mesh
+          key={i}
+          position={[0.078 * sign, Y_HEAD - 0.075, 0.04]}
+          scale={[0.7, 0.85, 0.8]}
+        >
+          <sphereGeometry args={[0.055, 14, 14]} />
+          <meshStandardMaterial color={beardWhite} roughness={0.98} />
+        </mesh>
+      ))}
+      {/* Moustache — thin pill right under the nose */}
+      <mesh
+        position={[0, Y_HEAD - 0.03, 0.122]}
+        rotation={[0.2, 0, 0]}
+      >
+        <boxGeometry args={[0.08, 0.02, 0.022]} />
+        <meshStandardMaterial color={beardWhite} roughness={0.98} />
+      </mesh>
+
+      {/* Left arm — hanging at the side. Shoulder tucks just inside the
+          torso (x = ±0.23) so the arm reads as attached, not floating. */}
+      <group position={[-0.23, Y_SHOULDER - 0.04, 0]} rotation={[0, 0, 0.08]}>
+        <mesh position={[0, -0.22, 0]} castShadow>
+          <cylinderGeometry args={[0.042, 0.045, 0.4, 14]} />
+          <meshStandardMaterial color={shirt} roughness={0.85} />
+        </mesh>
+        <mesh position={[-0.015, -0.52, 0]} castShadow>
+          <cylinderGeometry args={[0.038, 0.042, 0.3, 14]} />
+          <meshStandardMaterial color={skin} roughness={0.85} />
+        </mesh>
+        <mesh position={[-0.03, -0.69, 0]} castShadow>
+          <boxGeometry args={[0.07, 0.09, 0.05]} />
+          <meshStandardMaterial color={skin} roughness={0.85} />
+        </mesh>
+      </group>
+
+      {/* Right arm — STRAIGHT UP, hand visibly above the head.
+          All children point +Y (vertical). `useFrame` applies the wave
+          via a Z-axis rotation on THIS group, so the whole arm swings
+          around the shoulder pivot. */}
+      <group ref={arm} position={[0.23, Y_SHOULDER - 0.04, 0]}>
+        {/* Upper arm — shoulder → elbow, vertical */}
+        <mesh position={[0, 0.22, 0]} castShadow>
+          <cylinderGeometry args={[0.045, 0.042, 0.42, 14]} />
+          <meshStandardMaterial color={shirt} roughness={0.85} />
+        </mesh>
+        {/* Elbow bump */}
+        <mesh position={[0, 0.44, 0]} castShadow>
+          <sphereGeometry args={[0.045, 14, 14]} />
+          <meshStandardMaterial color={shirt} roughness={0.85} />
+        </mesh>
+        {/* Forearm — elbow → wrist, vertical (skin, rolled sleeves) */}
+        <mesh position={[0, 0.62, 0]} castShadow>
+          <cylinderGeometry args={[0.04, 0.038, 0.32, 14]} />
+          <meshStandardMaterial color={skin} roughness={0.85} />
+        </mesh>
+        {/* Wrist */}
+        <mesh position={[0, 0.8, 0]} castShadow>
+          <sphereGeometry args={[0.04, 12, 12]} />
+          <meshStandardMaterial color={skin} roughness={0.85} />
+        </mesh>
+        {/* Open palm facing forward */}
+        <mesh position={[0, 0.91, 0.015]} castShadow>
+          <boxGeometry args={[0.09, 0.13, 0.055]} />
+          <meshStandardMaterial color={skin} roughness={0.85} />
+        </mesh>
+        {/* 4 fingers splayed above the palm */}
+        {[-0.03, -0.01, 0.01, 0.03].map((x, i) => (
+          <mesh key={i} position={[x, 1.0, 0.02]} castShadow>
+            <boxGeometry args={[0.014, 0.06, 0.024]} />
+            <meshStandardMaterial color={skin} roughness={0.9} />
+          </mesh>
+        ))}
+        {/* Thumb sticking out to the side of the palm */}
+        <mesh
+          position={[0.055, 0.92, 0.02]}
+          rotation={[0, 0, -0.5]}
+          castShadow
+        >
+          <boxGeometry args={[0.015, 0.05, 0.022]} />
+          <meshStandardMaterial color={skin} roughness={0.9} />
+        </mesh>
+      </group>
     </group>
   )
 }

@@ -6,19 +6,20 @@ export default function Plan() {
     <section id="plan" className="section plan">
       <div className="container">
         <Reveal className="section__eyebrow">
-          <span>— PLAN TECHNIQUE · VUE DU DESSUS</span>
+          <span>— TECHNICAL PLAN · TOP VIEW</span>
         </Reveal>
 
         <Reveal as="h2" className="section__title">
-          La coupe,<br />
-          <em>à l’échelle.</em>
+          The section,<br />
+          <em>to scale.</em>
         </Reveal>
 
         <Reveal className="section__kicker">
           <p>
-            Un plan orthographique exact (échelle 1:50) des 7,2 × 2,5 m habitables.
-            Quatre zones fonctionnelles se succèdent sans cloisons superflues — la
-            lumière traverse la maison de part en part.
+            An exact orthographic plan (1:50 scale) of the 7.2 × 2.5 m
+            living envelope. Four functional zones flow into each other
+            with no superfluous partitions — light crosses the house from
+            end to end.
           </p>
         </Reveal>
 
@@ -30,7 +31,7 @@ export default function Plan() {
             viewBox="0 0 720 280"
             xmlns="http://www.w3.org/2000/svg"
             role="img"
-            aria-label="Plan schématique de la tiny house Kenolu"
+            aria-label="Schematic plan of the Kenolu tiny house"
           >
             <defs>
               <pattern id="hatch" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
@@ -54,22 +55,22 @@ export default function Plan() {
 
             {/* Kitchen */}
             <rect x="40" y="50" width="180" height="180" className="plan-room" rx="1" fill="url(#kitchenGlow)" />
-            <text x="130" y="140" textAnchor="middle" className="plan-label">CUISINE</text>
+            <text x="130" y="140" textAnchor="middle" className="plan-label">KITCHEN</text>
             <text x="130" y="160" textAnchor="middle" className="plan-label" style={{ fontSize: 9, fill: 'var(--text-muted)' }}>4 m²</text>
 
-            {/* Salon / bureau */}
+            {/* Living / desk */}
             <rect x="220" y="50" width="220" height="180" className="plan-room" rx="1" />
-            <text x="330" y="130" textAnchor="middle" className="plan-label">SALON / BUREAU</text>
+            <text x="330" y="130" textAnchor="middle" className="plan-label">LIVING / DESK</text>
             <text x="330" y="150" textAnchor="middle" className="plan-label" style={{ fontSize: 9, fill: 'var(--text-muted)' }}>7 m²</text>
 
             {/* Bed platform under mezzanine */}
             <rect x="440" y="50" width="240" height="180" className="plan-room" rx="1" fill="url(#bedGlow)" />
-            <text x="560" y="130" textAnchor="middle" className="plan-label">COUCHAGE</text>
+            <text x="560" y="130" textAnchor="middle" className="plan-label">SLEEPING</text>
             <text x="560" y="150" textAnchor="middle" className="plan-label" style={{ fontSize: 9, fill: 'var(--text-muted)' }}>6 m²</text>
 
             {/* Bathroom */}
             <rect x="320" y="140" width="120" height="90" className="plan-room plan-room--accent" rx="1" />
-            <text x="380" y="185" textAnchor="middle" className="plan-label">SDB</text>
+            <text x="380" y="185" textAnchor="middle" className="plan-label">BATH</text>
             <text x="380" y="200" textAnchor="middle" className="plan-label" style={{ fontSize: 9, fill: 'var(--text-muted)' }}>3 m²</text>
 
             {/* Walls (bold) */}
@@ -118,23 +119,23 @@ export default function Plan() {
           <div className="plan__legend">
             <div className="plan__legend-item">
               <span className="plan__legend-swatch" style={{ background: 'rgba(0,229,255,0.2)' }} />
-              Cuisine · 4 m²
+              Kitchen · 4 m²
             </div>
             <div className="plan__legend-item">
               <span className="plan__legend-swatch" style={{ background: 'transparent' }} />
-              Salon / bureau · 7 m²
+              Living / desk · 7 m²
             </div>
             <div className="plan__legend-item">
               <span className="plan__legend-swatch" style={{ background: 'rgba(106,92,255,0.2)' }} />
-              Couchage · 6 m²
+              Sleeping · 6 m²
             </div>
             <div className="plan__legend-item">
               <span className="plan__legend-swatch" style={{ background: 'rgba(0,229,255,0.08)', borderColor: 'var(--led)' }} />
-              Salle d’eau · 3 m²
+              Bathroom · 3 m²
             </div>
             <div className="plan__legend-item">
               <span className="plan__legend-swatch" style={{ background: 'transparent', borderStyle: 'dashed', borderColor: 'var(--led)' }} />
-              Cotes (cm)
+              Dimensions (cm)
             </div>
           </div>
         </Reveal>

@@ -141,27 +141,27 @@ export default function Experiment() {
       </Canvas>
 
       <header className="experiment__hud-top">
-        <a href="/" className="experiment__back" aria-label="Retour">
-          ← Retour
+        <a href="/" className="experiment__back" aria-label="Back">
+          ← Back
         </a>
         <div className="experiment__title">
           <span className="experiment__brand">KENOLU</span>
-          <span className="experiment__eyebrow">// EXPÉRIMENTATION — VUE 3D LIBRE</span>
+          <span className="experiment__eyebrow">// EXPERIMENT — FREE 3D VIEW</span>
         </div>
       </header>
 
       <aside className="experiment__hud-side">
         <div className="experiment__chip">
           <span className="experiment__chip-num">01</span>
-          Clic-glisser → orbiter
+          Click-drag → orbit
         </div>
         <div className="experiment__chip">
           <span className="experiment__chip-num">02</span>
-          Molette → zoom
+          Wheel → zoom
         </div>
         <div className="experiment__chip">
           <span className="experiment__chip-num">03</span>
-          Clic droit → translation
+          Right-click → pan
         </div>
       </aside>
 
@@ -175,10 +175,10 @@ export default function Experiment() {
         >
           <div className="experiment__video-head">
             <span className="experiment__video-dot" aria-hidden />
-            <span className="experiment__video-title">TV INTÉGRÉE</span>
+            <span className="experiment__video-title">BUILT-IN TV</span>
           </div>
           <label className="experiment__video-field">
-            <span>URL YouTube</span>
+            <span>YouTube URL</span>
             <input
               type="text"
               inputMode="url"
@@ -192,12 +192,12 @@ export default function Experiment() {
           </label>
           {videoError && (
             <span className="experiment__video-error">
-              URL invalide. Colle un lien YouTube.
+              Invalid URL. Paste a YouTube link.
             </span>
           )}
           <div className="experiment__video-actions">
             <button type="submit" className="experiment__video-play-btn">
-              ▶ Lancer
+              ▶ Play
             </button>
             {videoId && (
               <button
@@ -205,13 +205,13 @@ export default function Experiment() {
                 className="experiment__video-stop-btn"
                 onClick={onStopVideo}
               >
-                ■ Arrêter
+                ■ Stop
               </button>
             )}
           </div>
           {videoId && (
             <span className="experiment__video-status">
-              En lecture sur la TV · ID {videoId}
+              Playing on the TV · ID {videoId}
             </span>
           )}
         </form>
@@ -220,7 +220,7 @@ export default function Experiment() {
       <footer className="experiment__hud-bottom">
         <label className="experiment__slider">
           <span className="experiment__slider-label">
-            Vue éclatée
+            Exploded view
             <span className="experiment__slider-value">
               {Math.round(progress * 100)}%
             </span>

@@ -60,6 +60,7 @@ import {
   PathStone,
   Birds,
   Dog,
+  Human,
 } from './tinyHouseParts'
 
 /* ============================================================
@@ -90,6 +91,13 @@ export default function TinyHouse3D({
   const wallBack = useRef()
   const wallLeft = useRef()
   const wallRight = useRef()
+  // Inner meshes of each wall — used as occluders for the TV iframe so
+  // the video disappears behind solid cladding but stays visible through
+  // window and door openings (the CutoutWall geometry has real holes).
+  const wallFrontMesh = useRef()
+  const wallBackMesh = useRef()
+  const wallLeftMesh = useRef()
+  const wallRightMesh = useRef()
   const insulFront = useRef()
   const insulBack = useRef()
   const doorRef = useRef()
@@ -187,7 +195,7 @@ export default function TinyHouse3D({
 
     if (doorRef.current) doorRef.current.rotation.y = tpWalls * 1.2
     if (porchRef.current) porchRef.current.position.z = -W / 2 - 0.65 - tpWalls * 0.2
-    if (awningRef.current) awningRef.current.position.y = H / 2 + 0.4 + tpRoof * 1.2
+    if (awningRef.current) awningRef.current.position.y = 0.95 + tpRoof * 1.3
 
     if (interiorRef.current) {
       interiorRef.current.children.forEach((child, i) => {
@@ -409,6 +417,7 @@ export default function TinyHouse3D({
           single Window pane at the centre of each opening. */}
       <group ref={wallFront} position={[0, 0, -W / 2]}>
         <CutoutWall
+          ref={wallFrontMesh}
           width={L}
           height={H}
           thickness={T}
@@ -474,6 +483,7 @@ export default function TinyHouse3D({
       {/* BACK WALL — 3 cut-out windows. */}
       <group ref={wallBack} position={[0, 0, W / 2]}>
         <CutoutWall
+          ref={wallBackMesh}
           width={L}
           height={H}
           thickness={T}
@@ -497,29 +507,48 @@ export default function TinyHouse3D({
             a YouTube iframe exactly on the screen — the video plays
             ONLY on the 3D TV, not in any modal. */}
         <group position={[-1.1, 0.3, -T / 2 - 0.04]} rotation={[0, Math.PI, 0]}>
-          <TVModule />
+          <TVModule screenOff={Boolean(videoId)} />
           {videoId && (
             <Html
-              transform
-              occlude="blending"
+              /* Screen-aligned overlay pinned to the TV's 3D position.
+                 `occlude` takes an array of mesh refs — drei raycasts from
+                 the camera to the TV and hides the iframe if any of these
+                 meshes is in the way. The CutoutWall meshes already have
+                 real holes for windows and the door, so raycasts going
+                 through a window opening DON'T hit the wall and the
+                 iframe stays visible from those angles. */
               position={[0, 0, 0.008]}
-              scale={0.002}
+              center
+              distanceFactor={1.42}
+              occlude={[
+                wallFrontMesh,
+                wallBackMesh,
+                wallLeftMesh,
+                wallRightMesh,
+              ]}
+              zIndexRange={[16, 0]}
               style={{
-                width: '570px',
-                height: '320px',
-                pointerEvents: 'auto',
+                width: '800px',
+                height: '450px',
                 background: '#000',
+                overflow: 'hidden',
+                pointerEvents: 'auto',
               }}
             >
               <iframe
                 key={videoId}
-                width="570"
-                height="320"
-                src={`https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1`}
+                width="800"
+                height="450"
+                src={`https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&playsinline=1`}
                 title="TV Kenolu"
                 allow="autoplay; encrypted-media; picture-in-picture"
                 allowFullScreen
-                style={{ border: 0, display: 'block', width: '100%', height: '100%' }}
+                style={{
+                  border: 0,
+                  display: 'block',
+                  width: '800px',
+                  height: '450px',
+                }}
               />
             </Html>
           )}
@@ -541,6 +570,7 @@ export default function TinyHouse3D({
       <group ref={wallLeft} position={[-L / 2, 0, 0]}>
         <group rotation={[0, Math.PI / 2, 0]}>
           <CutoutWall
+            ref={wallLeftMesh}
             width={W}
             height={H}
             thickness={T}
@@ -606,7 +636,13 @@ export default function TinyHouse3D({
       {/* RIGHT END WALL + gable. Same 90° rotation as left, no holes. */}
       <group ref={wallRight} position={[L / 2, 0, 0]}>
         <group rotation={[0, -Math.PI / 2, 0]}>
-          <CutoutWall width={W} height={H} thickness={T} map={woodShort} />
+          <CutoutWall
+            ref={wallRightMesh}
+            width={W}
+            height={H}
+            thickness={T}
+            map={woodShort}
+          />
         </group>
         <group position={[T / 2 + 0.001, H / 2, 0]} rotation={[0, Math.PI / 2, 0]}>
           <GableTriangle
@@ -747,7 +783,9 @@ export default function TinyHouse3D({
       </group>
 
       {/* ==================== AWNING + PORCH ==================== */}
-      <group ref={awningRef} position={[2.4, H / 2 + 0.4, -W / 2 - 0.3]}>
+      {/* Awning sits just above the door head trim (door top ≈ y=0.85).
+          Anchored on the front-wall exterior face. */}
+      <group ref={awningRef} position={[2.4, 0.95, -W / 2 - 0.04]}>
         <Awning />
       </group>
       <group ref={porchRef} position={[2.4, FLOOR_Y + 0.05, -W / 2 - 0.65]}>
@@ -808,8 +846,10 @@ export default function TinyHouse3D({
         <CoffeeTable />
       </group>
 
-      {/* ==================== COMPANION + SKY ==================== */}
+      {/* ==================== COMPANIONS + SKY ==================== */}
       <Dog position={[5.4, GROUND_Y, 1.6]} facing={-0.6} />
+      {/* Human standing to the dog's left, same orientation as the dog. */}
+      <Human position={[4.1, GROUND_Y, 2.0]} facing={-0.6} />
       <Birds />
 
       {/* ==================== LANDSCAPE / ENVIRONMENT ====================
