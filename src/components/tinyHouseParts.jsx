@@ -249,8 +249,13 @@ export function makeSolarCellTexture() {
    ------------------------------------------------------------ */
 
 /** Minimal wheel: single smooth tire, silver hub, 5 bolts, dark cap.
-    No concentric rings, no spokes — clean industrial look. */
-export function DetailedWheel({ position }) {
+    `side = +1` puts the hub face on the +Z flank (default), `-1` flips
+    everything to the -Z flank so the outer face of the wheel always
+    points away from the chassis, whatever side it's mounted on. */
+export function DetailedWheel({ position, side = 1 }) {
+  const hubZ = 0.2 * side
+  const boltZ = 0.22 * side
+  const capZ = 0.225 * side
   return (
     <group position={position}>
       {/* Tire */}
@@ -258,8 +263,8 @@ export function DetailedWheel({ position }) {
         <cylinderGeometry args={[WHEEL_RADIUS, WHEEL_RADIUS, 0.38, 48]} />
         <meshStandardMaterial color="#0a0a10" roughness={0.9} metalness={0.05} />
       </mesh>
-      {/* Hub plate (outer face) */}
-      <mesh position={[0, 0, 0.2]} rotation={[Math.PI / 2, 0, 0]}>
+      {/* Hub plate — on the outer face */}
+      <mesh position={[0, 0, hubZ]} rotation={[Math.PI / 2, 0, 0]}>
         <cylinderGeometry args={[0.34, 0.34, 0.04, 32]} />
         <meshStandardMaterial color={COLORS.brightMetal} metalness={1} roughness={0.3} />
       </mesh>
@@ -269,7 +274,7 @@ export function DetailedWheel({ position }) {
         return (
           <mesh
             key={i}
-            position={[Math.cos(a) * 0.22, Math.sin(a) * 0.22, 0.22]}
+            position={[Math.cos(a) * 0.22, Math.sin(a) * 0.22, boltZ]}
             rotation={[Math.PI / 2, 0, 0]}
           >
             <cylinderGeometry args={[0.028, 0.028, 0.03, 6]} />
@@ -278,7 +283,7 @@ export function DetailedWheel({ position }) {
         )
       })}
       {/* Central cap */}
-      <mesh position={[0, 0, 0.225]} rotation={[Math.PI / 2, 0, 0]}>
+      <mesh position={[0, 0, capZ]} rotation={[Math.PI / 2, 0, 0]}>
         <cylinderGeometry args={[0.09, 0.09, 0.04, 24]} />
         <meshStandardMaterial color={COLORS.darkMetal} metalness={1} roughness={0.25} />
       </mesh>
@@ -1444,6 +1449,273 @@ export function LoftLadder({ height = 1.5 }) {
           <meshStandardMaterial color={COLORS.brightMetal} metalness={1} roughness={0.35} />
         </mesh>
       ))}
+    </group>
+  )
+}
+
+/** Small chest of drawers meant to tuck under the loft mezzanine.
+    Body centred on its origin; overall ≈ 0.8 × 0.6 × 0.4 (W × H × D). */
+export function StorageDrawers() {
+  return (
+    <group>
+      {/* Main cabinet body (dark wood) */}
+      <mesh castShadow receiveShadow>
+        <boxGeometry args={[0.8, 0.6, 0.4]} />
+        <meshStandardMaterial color={COLORS.darkWood} roughness={0.75} />
+      </mesh>
+      {/* Top plate */}
+      <mesh position={[0, 0.305, 0]}>
+        <boxGeometry args={[0.84, 0.015, 0.42]} />
+        <meshStandardMaterial color="#1a1a22" roughness={0.5} metalness={0.35} />
+      </mesh>
+      {/* 3 stacked drawer fronts with brass-coloured pull handles */}
+      {[0.18, 0, -0.18].map((y, i) => (
+        <group key={i}>
+          {/* Drawer face */}
+          <mesh position={[0, y, 0.205]} castShadow>
+            <boxGeometry args={[0.74, 0.16, 0.02]} />
+            <meshStandardMaterial color="#3a2a1c" roughness={0.65} />
+          </mesh>
+          {/* Horizontal pull handle */}
+          <mesh position={[0, y, 0.225]}>
+            <boxGeometry args={[0.18, 0.016, 0.015]} />
+            <meshStandardMaterial
+              color={COLORS.brass}
+              metalness={0.95}
+              roughness={0.28}
+            />
+          </mesh>
+          {/* Handle stand-offs so it reads as an actual grip */}
+          {[-0.08, 0.08].map((x, j) => (
+            <mesh key={j} position={[x, y, 0.215]}>
+              <boxGeometry args={[0.008, 0.008, 0.02]} />
+              <meshStandardMaterial
+                color={COLORS.brass}
+                metalness={0.95}
+                roughness={0.28}
+              />
+            </mesh>
+          ))}
+        </group>
+      ))}
+      {/* 4 small metal feet */}
+      {[
+        [-0.35, -0.315, -0.17],
+        [0.35, -0.315, -0.17],
+        [-0.35, -0.315, 0.17],
+        [0.35, -0.315, 0.17],
+      ].map((p, i) => (
+        <mesh key={i} position={p}>
+          <cylinderGeometry args={[0.022, 0.022, 0.04, 10]} />
+          <meshStandardMaterial color={COLORS.darkMetal} metalness={0.9} roughness={0.35} />
+        </mesh>
+      ))}
+      {/* Cyan LED accent along the front of the top plate */}
+      <mesh position={[0, 0.305, 0.205]}>
+        <boxGeometry args={[0.7, 0.005, 0.005]} />
+        <meshStandardMaterial
+          color={COLORS.cyan}
+          emissive={COLORS.cyan}
+          emissiveIntensity={1.3}
+          toneMapped={false}
+        />
+      </mesh>
+      {/* A small plant sitting on top — filler detail */}
+      <mesh position={[0.25, 0.37, 0.05]} castShadow>
+        <cylinderGeometry args={[0.06, 0.05, 0.1, 14]} />
+        <meshStandardMaterial color="#3a2a1c" roughness={0.8} />
+      </mesh>
+      {Array.from({ length: 5 }).map((_, i) => {
+        const a = (i / 5) * Math.PI * 2
+        return (
+          <mesh
+            key={i}
+            position={[0.25 + Math.cos(a) * 0.05, 0.5, 0.05 + Math.sin(a) * 0.05]}
+            rotation={[0.25, a, 0.25]}
+          >
+            <coneGeometry args={[0.04, 0.2, 5]} />
+            <meshStandardMaterial color="#3a6044" roughness={0.85} />
+          </mesh>
+        )
+      })}
+    </group>
+  )
+}
+
+/** Combined work desk: left-side drawer cabinet + continuous wood desktop
+    spanning across + metal legs on the right + PC monitor, keyboard and
+    mouse arranged as a workstation. The back is meant to sit against the
+    wall — the desk top is the wood "continuity" referenced by the design.
+    Overall footprint ≈ 1.5 × 0.65 × 0.5 (W × H × D). Origin at centre. */
+export function WorkDesk() {
+  const DRAWER_BODY_DEPTH = 0.46
+  const TOP_DEPTH = 0.5
+  const TOP_W = 1.5
+  return (
+    <group>
+      {/* ── Drawer cabinet (left side) ───────────────────── */}
+      <group position={[-0.45, 0, 0]}>
+        {/* Body */}
+        <mesh castShadow receiveShadow>
+          <boxGeometry args={[0.55, 0.6, DRAWER_BODY_DEPTH]} />
+          <meshStandardMaterial color={COLORS.darkWood} roughness={0.75} />
+        </mesh>
+        {/* 2 drawer fronts with brass handles */}
+        {[0.13, -0.13].map((y, i) => (
+          <group key={i}>
+            <mesh position={[0, y, DRAWER_BODY_DEPTH / 2 + 0.01]} castShadow>
+              <boxGeometry args={[0.5, 0.22, 0.02]} />
+              <meshStandardMaterial color="#3a2a1c" roughness={0.65} />
+            </mesh>
+            <mesh position={[0, y, DRAWER_BODY_DEPTH / 2 + 0.03]}>
+              <boxGeometry args={[0.14, 0.016, 0.015]} />
+              <meshStandardMaterial
+                color={COLORS.brass}
+                metalness={0.95}
+                roughness={0.28}
+              />
+            </mesh>
+            {[-0.06, 0.06].map((x, j) => (
+              <mesh key={j} position={[x, y, DRAWER_BODY_DEPTH / 2 + 0.022]}>
+                <boxGeometry args={[0.008, 0.008, 0.02]} />
+                <meshStandardMaterial
+                  color={COLORS.brass}
+                  metalness={0.95}
+                  roughness={0.28}
+                />
+              </mesh>
+            ))}
+          </group>
+        ))}
+        {/* 4 metal feet */}
+        {[
+          [-0.23, -0.315, -0.2],
+          [0.23, -0.315, -0.2],
+          [-0.23, -0.315, 0.2],
+          [0.23, -0.315, 0.2],
+        ].map((p, i) => (
+          <mesh key={i} position={p}>
+            <cylinderGeometry args={[0.022, 0.022, 0.04, 10]} />
+            <meshStandardMaterial color={COLORS.darkMetal} metalness={0.9} />
+          </mesh>
+        ))}
+      </group>
+
+      {/* ── Continuous wood desktop across the full width ── */}
+      <mesh position={[0, 0.32, 0]} castShadow receiveShadow>
+        <boxGeometry args={[TOP_W, 0.03, TOP_DEPTH]} />
+        <meshStandardMaterial color={COLORS.darkWood} roughness={0.7} />
+      </mesh>
+      {/* Cyan LED accent along the front edge */}
+      <mesh position={[0, 0.305, TOP_DEPTH / 2 - 0.005]}>
+        <boxGeometry args={[TOP_W - 0.1, 0.005, 0.005]} />
+        <meshStandardMaterial
+          color={COLORS.cyan}
+          emissive={COLORS.cyan}
+          emissiveIntensity={1.2}
+          toneMapped={false}
+        />
+      </mesh>
+
+      {/* ── Right-side support legs (under the desk top, no drawers) ── */}
+      {[-0.2, 0.2].map((z, i) => (
+        <mesh key={i} position={[0.68, 0, z]} castShadow>
+          <boxGeometry args={[0.05, 0.6, 0.05]} />
+          <meshStandardMaterial
+            color={COLORS.darkMetal}
+            metalness={0.9}
+            roughness={0.35}
+          />
+        </mesh>
+      ))}
+      {/* Cross-brace between the right legs for a clean industrial look */}
+      <mesh position={[0.68, -0.25, 0]}>
+        <boxGeometry args={[0.05, 0.04, 0.44]} />
+        <meshStandardMaterial color={COLORS.darkMetal} metalness={0.9} />
+      </mesh>
+
+      {/* ── Monitor ───────────────────────────────────────── */}
+      <group position={[0.32, 0.335, -0.08]}>
+        {/* Weighted base */}
+        <mesh castShadow>
+          <boxGeometry args={[0.22, 0.015, 0.18]} />
+          <meshStandardMaterial
+            color={COLORS.darkMetal}
+            metalness={0.9}
+            roughness={0.3}
+          />
+        </mesh>
+        {/* Stand neck */}
+        <mesh position={[0, 0.17, 0.03]} castShadow>
+          <boxGeometry args={[0.04, 0.32, 0.03]} />
+          <meshStandardMaterial
+            color={COLORS.darkMetal}
+            metalness={0.9}
+            roughness={0.3}
+          />
+        </mesh>
+        {/* Bezel */}
+        <mesh position={[0, 0.46, 0.032]} castShadow>
+          <boxGeometry args={[0.72, 0.42, 0.03]} />
+          <meshStandardMaterial color="#0a0a0f" metalness={0.45} roughness={0.3} />
+        </mesh>
+        {/* Emissive screen */}
+        <mesh position={[0, 0.46, 0.048]}>
+          <planeGeometry args={[0.68, 0.38]} />
+          <meshStandardMaterial
+            color="#0a1a2e"
+            emissive="#2a64a8"
+            emissiveIntensity={1.1}
+            toneMapped={false}
+          />
+        </mesh>
+        {/* Content stripe suggesting a live window */}
+        <mesh position={[0, 0.38, 0.049]}>
+          <planeGeometry args={[0.68, 0.05]} />
+          <meshStandardMaterial
+            color={COLORS.cyan}
+            emissive={COLORS.cyan}
+            emissiveIntensity={1.3}
+            transparent
+            opacity={0.3}
+            toneMapped={false}
+          />
+        </mesh>
+        {/* Tiny brand LED on the lower bezel */}
+        <mesh position={[0, 0.24, 0.049]}>
+          <sphereGeometry args={[0.008, 8, 8]} />
+          <meshStandardMaterial
+            color={COLORS.cyan}
+            emissive={COLORS.cyan}
+            emissiveIntensity={3}
+            toneMapped={false}
+          />
+        </mesh>
+      </group>
+
+      {/* ── Keyboard ─────────────────────────────────────── */}
+      <mesh position={[0.32, 0.345, 0.12]} castShadow>
+        <boxGeometry args={[0.38, 0.018, 0.13]} />
+        <meshStandardMaterial color="#14141a" roughness={0.5} />
+      </mesh>
+      <mesh position={[0.32, 0.355, 0.12]}>
+        <boxGeometry args={[0.36, 0.003, 0.11]} />
+        <meshStandardMaterial color="#22232c" roughness={0.6} />
+      </mesh>
+
+      {/* ── Mouse + pad ──────────────────────────────────── */}
+      <mesh position={[0.59, 0.336, 0.13]}>
+        <boxGeometry args={[0.14, 0.003, 0.17]} />
+        <meshStandardMaterial color="#1a1d26" roughness={0.85} />
+      </mesh>
+      <mesh position={[0.59, 0.345, 0.13]} castShadow>
+        <boxGeometry args={[0.07, 0.022, 0.11]} />
+        <meshStandardMaterial color="#14141a" roughness={0.5} />
+      </mesh>
+      <mesh position={[0.59, 0.358, 0.1]}>
+        <boxGeometry args={[0.014, 0.006, 0.022]} />
+        <meshStandardMaterial color={COLORS.darkMetal} metalness={0.8} />
+      </mesh>
     </group>
   )
 }
